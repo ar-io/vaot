@@ -1,5 +1,5 @@
-package = "ario-airdrop"
-version = "0.1-1"
+package = "tesserao"
+version = "0.1.0"
 rockspec_format = "3.0"
 source = {
     url = "./src/main.lua"
