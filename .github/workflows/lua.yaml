@@ -1,0 +1,151 @@
+name: 🪂 $ARIO AO Process
+
+on:
+  pull_request:
+    paths:
+      - 'process/**'
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'process/**'
+
+defaults:
+  run:
+    working-directory: process
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: '5.3'
+
+      - name: Setup LuaRocks
+        uses: leafo/gh-actions-luarocks@v4.3.0
+
+      - name: Install Luacheck
+        run: luarocks install luacheck
+
+      - run: luacheck src spec
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - run: yarn --frozen-lockfile
+      - run: yarn build
+      - run: yarn test:integration
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Check out repository code
+
+      - name: Setup Lua
+        uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: '5.3' # Specify the Lua version you need
+
+      - name: Setup LuaRocks
+        uses: leafo/gh-actions-luarocks@v4.3.0
+
+      - name: Install Busted
+        run: luarocks install ario-airdrop-0.1-1.rockspec
+
+      - name: Run Busted Tests
+        run: yarn test:unit
+
+  evolve:
+    runs-on: ubuntu-latest
+    needs: [integration, unit, lint]
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    environment: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+      - run: yarn --frozen-lockfile
+      - run: yarn evolve
+        env:
+          WALLET: ${{ secrets.WALLET }}
+          ARIO_AIRDROP_PROCESS_ID: ${{ vars.ARIO_AIRDROP_PROCESS_ID }}
+          AO_CU_URL: ${{ vars.AO_CU_URL }}
+      - name: Notify Success
+        if: success()
+        uses: rtCamp/action-slack-notify@v2.3.0
+        env:
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: Updated the $ARIO Airdrop Process (${{ vars.ARIO_AIRDROP_PROCESS_ID }})!
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CUSTOM_PAYLOAD: |
+            {
+              "attachments": [{
+                "fallback": "Updated the $ARIO Airdrop Process (${{ vars.ARIO_AIRDROP_PROCESS_ID }})!",
+                "color": "good",
+                "title": "Details",
+                "text": 'The $ARIO Airdrop Process has been updated!',
+                "fields": [
+                {
+                  "title": "Process ID",
+                  "value": "${{ vars.ARIO_AIRDROP_PROCESS_ID }}",
+                  "short": true
+                },
+                {
+                  "title": "View on ao.link",
+                  "value": "https://www.ao.link/#/entity/${{ vars.ARIO_AIRDROP_PROCESS_ID }}?tab=source-code",
+                  "short": false
+                }
+                ,
+                {
+                  "title": "Commit",
+                  "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                }
+                ]
+              }]
+            }
+
+      - name: Notify Failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_COLOR: danger
+          SLACK_TITLE: $ARIO Airdrop Process Evolution Failed!
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CUSTOM_PAYLOAD: |
+            {
+              "text": "IO Process Evolution Failed!",
+              "attachments": [{
+                "fallback": "Failed to update the $ARIO Airdrop Process (${{ vars.ARIO_AIRDROP_PROCESS_ID }})!",
+                "color": "danger",
+                "title": "Details",
+                "text": 'The IO "${{ github.ref_name == 'main' && 'testnet' || 'devnet' }} Process ( ${{ vars.IO_NETWORK_PROCESS_ID }}) FAILED to update!',
+                "fields": [
+                {
+                  "title": "Process ID",
+                  "value": "${{ vars.IO_NETWORK_PROCESS_ID }}",
+                  "short": true
+                },
+                {
+                  "title": "GitHub Action",
+                  "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "short": false
+                },
+                {
+                  "title": "Commit",
+                  "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                }
+                ]
+              }]
+            }

@@ -1,0 +1,21 @@
+{
+  "Lua": {
+    "runtime": {
+      "version": "5.3",
+      "path": ["?.lua", "?/init.lua"]
+    },
+    "workspace": {
+      "library": [
+        "src",
+        "spec",
+        "${addons}/busted/module/library",
+        "${3rd}/luassert/library"
+      ]
+    },
+    "diagnostics": {
+      "enable": true,
+      "globals": []
+    }
+  },
+  "workspace.checkThirdParty": false
+}

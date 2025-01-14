@@ -1,0 +1,41 @@
+{
+  "[mjs, js]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.formatOnSaveMode": "file"
+  },
+  "prettier.configPath": ".prettierrc",
+  "prettier.prettierPath": "./node_modules/prettier/index.mjs",
+  "[typescript]": {
+    "editor.formatOnSave": true
+  },
+  "[markdown]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file"
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/lib": true,
+    "**/dist": true,
+    "**/coverage": true
+  },
+  "Lua.codeLens.enable": true,
+  "Lua.workspace.library": ["${workspaceFolderBasename}/**"],
+  "Lua.completion.callSnippet": "Both",
+  "Lua.signatureHelp.enable": true,
+  "Lua.workspace.checkThirdParty": true,
+  "Lua.diagnostics.enable": true,
+  "Lua.diagnostics.disable": ["lowercase-global", "undefined-global"],
+  "Lua.format.defaultConfig": {
+    "indent_style": "space",
+    "indent_size": "2"
+  },
+  "[lua]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.formatOnSaveMode": "file"
+  },
+  "cSpell.words": ["hashchain", "redelegate"]
+}

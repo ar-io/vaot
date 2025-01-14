@@ -1,0 +1,19 @@
+{
+  "name": "tesserao",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "repository": "https://github.com/ar-io/tesserao.git",
+  "author": "Ariel Melendez <ariel@pds.inc>",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "prepare": "husky",
+    "lint": "prettier --write ."
+  },
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "prettier": "^3.0.0",
+    "lint-staged": "^15.0.0",
+    "markdown-toc-gen": "^1.0.0"
+  }
+}
