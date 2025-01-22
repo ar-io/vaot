@@ -8,7 +8,7 @@
     "evolve": "yarn build && node tools/evolve.mjs"
   },
   "devDependencies": {
-    "@permaweb/ao-loader": "^0.0.35",
+    "@permaweb/ao-loader": "^0.0.44",
     "@permaweb/aoconnect": "^0.0.55"
   },
   "lint-staged": {

@@ -44,7 +44,7 @@ export const AOS_WASM = fs.readFileSync(
 );
 
 export const BUNDLED_SOURCE_CODE = fs.readFileSync(
-  path.join(__dirname, '../dist/aos-bundled.lua'),
+  path.join(__dirname, '../dist/process.lua'),
   'utf-8',
 );
 

@@ -6,7 +6,7 @@
     "editor.formatOnSaveMode": "file"
   },
   "prettier.configPath": ".prettierrc",
-  "prettier.prettierPath": "./node_modules/prettier/index.mjs",
+  "prettier.prettierPath": "./node_modules/prettier",
   "[typescript]": {
     "editor.formatOnSave": true
   },

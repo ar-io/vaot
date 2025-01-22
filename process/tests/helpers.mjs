@@ -1,19 +1,13 @@
 import assert from 'node:assert';
-import { createAosLoader } from './utils.mjs';
-import {
-  AO_LOADER_HANDLER_ENV,
-  DEFAULT_HANDLE_OPTIONS,
-} from '../tools/constants.mjs';
-
-import AoLoader from '@permaweb/ao-loader';
 import {
   AOS_WASM,
   AO_LOADER_HANDLER_ENV,
   AO_LOADER_OPTIONS,
   DEFAULT_HANDLE_OPTIONS,
   BUNDLED_SOURCE_CODE,
+
 } from '../tools/constants.mjs';
-import assert from 'node:assert';
+import AoLoader from '@permaweb/ao-loader';
 
 /**
  * Loads the aos wasm binary and returns the handle function with program memory
@@ -58,5 +52,21 @@ export async function handle({ options = {}, mem = startMemory }) {
       ...options,
     },
     AO_LOADER_HANDLER_ENV,
+  );
+}
+
+export function parseEventsFromResult(result) {
+  return (
+    result?.Output?.data
+      ?.split('\n')
+      ?.filter((line) => line.trim().startsWith('{"'))
+      ?.map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch (e) {
+          return {};
+        }
+      })
+      ?.filter((event) => Object.keys(event).length && event['_e']) || []
   );
 }
