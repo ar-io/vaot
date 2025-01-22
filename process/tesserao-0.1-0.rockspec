@@ -1,5 +1,5 @@
 package = "tesserao"
-version = "0.1.0"
+version = "0.1-0"
 rockspec_format = "3.0"
 source = {
     url = "./src/main.lua"
