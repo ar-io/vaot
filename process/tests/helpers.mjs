@@ -5,7 +5,6 @@ import {
   AO_LOADER_OPTIONS,
   DEFAULT_HANDLE_OPTIONS,
   BUNDLED_SOURCE_CODE,
-
 } from '../tools/constants.mjs';
 import AoLoader from '@permaweb/ao-loader';
 
@@ -39,7 +38,6 @@ export function assertNoResultError(result) {
   );
   assert.strictEqual(errorTag, undefined);
 }
-
 
 const { handle: originalHandle, memory } = await createAosLoader();
 export const startMemory = memory;

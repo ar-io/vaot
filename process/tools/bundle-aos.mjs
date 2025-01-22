@@ -5,8 +5,8 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const mainFilePath = "../" + (process.argv[2] || "src/main.lua");
-const outputFilePath = "../" + (process.argv[3] || "dist/process.lua");
+const mainFilePath = '../' + (process.argv[2] || 'src/main.lua');
+const outputFilePath = '../' + (process.argv[3] || 'dist/process.lua');
 
 async function main() {
   console.log('🔧 Bundling Lua...');
