@@ -60,7 +60,7 @@ jobs:
         uses: leafo/gh-actions-luarocks@v4.3.0
 
       - name: Install Busted
-        run: luarocks install tesserao-0.1.0.rockspec
+        run: luarocks install tesserao-0.1-0.rockspec
 
       - name: Run Busted Tests
         run: yarn test:unit
