@@ -130,11 +130,11 @@ jobs:
                 "fallback": "Failed to update the TesserAO Process (${{ vars.TESSERAO_PROCESS_ID }})!",
                 "color": "danger",
                 "title": "Details",
-                "text": 'The IO "${{ github.ref_name == 'main' && 'testnet' || 'devnet' }} Process ( ${{ vars.IO_NETWORK_PROCESS_ID }}) FAILED to update!',
+                "text": 'The IO "${{ github.ref_name == 'main' && 'testnet' || 'devnet' }} Process ( ${{ vars.TESSERAO_PROCESS_ID }}) FAILED to update!',
                 "fields": [
                 {
                   "title": "Process ID",
-                  "value": "${{ vars.IO_NETWORK_PROCESS_ID }}",
+                  "value": "${{ vars.TESSERAO_PROCESS_ID }}",
                   "short": true
                 },
                 {

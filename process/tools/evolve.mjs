@@ -5,8 +5,8 @@ import { execSync } from 'child_process';
 
 const wallet = JSON.parse(process.env.WALLET);
 const signer = createAoSigner(new ArweaveSigner(wallet));
-const networkProcess = new AOProcess({
-  processId: process.env.IO_NETWORK_PROCESS_ID,
+const tesseraoProcess = new AOProcess({
+  processId: process.env.TESSERAO_PROCESS_ID,
   ao: connect({
     CU_URL: process.env.AO_CU_URL,
   }),
@@ -22,7 +22,7 @@ try {
   console.error('Error retrieving Git hash:', error);
 }
 
-const { id } = await networkProcess.send({
+const { id } = await tesseraoProcess.send({
   tags,
   data: constants.BUNDLED_SOURCE_CODE,
   signer,
