@@ -8,6 +8,7 @@
     "evolve": "yarn build && node tools/evolve.mjs"
   },
   "devDependencies": {
+    "@ar.io/sdk": "^3.3.0-alpha.12",
     "@permaweb/ao-loader": "^0.0.44",
     "@permaweb/aoconnect": "^0.0.55"
   },
