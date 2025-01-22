@@ -10,7 +10,7 @@
   "devDependencies": {
     "@ar.io/sdk": "^3.2.0",
     "@permaweb/ao-loader": "^0.0.44",
-    "@permaweb/aoconnect": "^0.0.55"
+    "@permaweb/aoconnect": "^0.0.63"
   },
   "lint-staged": {
     "*.lua": [
