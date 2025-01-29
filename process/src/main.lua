@@ -1,15 +1,55 @@
 local TEvent = require("tevent")
 local utils = require("utils")
 
+Owner = Owner or ao.env.Process.Owner
+
 --- @alias WalletAddress string
+--- @alias ProcessId string
 
 -- Tessera are voting tokens, one per WalletAddress
---- @type WalletAddress[]
-Tessera = Tessera or {}
+--- @type table<WalletAddress, any>
+Tessera = Tessera or {
+	[Owner] = true,
+}
 
+--- @alias ProposalName string
+--- @alias ProposalNumber number
+
+--- @class ProposalData
+--- @field proposalNumber ProposalNumber
+--- @field type "Add-Controller"|"Remove-Controller"|"Transfer-Process"|"Eval"
+--- @field yays table<WalletAddress, any>
+--- @field nays table<WalletAddress, any>
+
+--- @class AddControllerProposalData : ProposalData
+--- @field controller WalletAddress
+--- @field type "Add-Controller"
+
+--- @class RemoveControllerProposalData : ProposalData
+--- @field controller WalletAddress
+--- @field type "Remove-Controller"
+
+--- @class TransferProcessProposalData : ProposalData
+--- @field processId ProcessId
+--- @field recipient WalletAddress
+--- @field type "Transfer-Process"
+
+--- @class EvalProposalData : ProposalData
+--- @field processId ProcessId
+--- @field evalStr string
+--- @field type "Eval"
+
+--- @alias ProposalDataType AddControllerProposalData|RemoveControllerProposalData|TransferProcessProposalData|EvalProposalData
+
+--- @type ProposalNumber
+ProposalNumber = ProposalNumber or 0
+--- @type table<ProposalName, ProposalDataType>
 Proposals = Proposals or {}
 
 --- @alias Timestamp number
+
+LastKnownMessageTimestamp = LastKnownMessageTimestamp or 0
+LastKnownMessageId = LastKnownMessageId or ""
 
 local function eventingPcall(event, onError, fnToCall, ...)
 	local status, result = pcall(fnToCall, ...)
@@ -66,7 +106,7 @@ local function addEventingHandler(handlerName, pattern, handleFn, critical, prin
 		if not status and critical then
 			local errorEvent = TEvent(msg)
 			-- For critical handlers we want to make sure the event data gets sent to the CU for processing, but that the memory is discarded on failures
-			-- These handlers (distribute, prune) severely modify global state, and partial updates are dangerous.
+			-- These is for handlers that severely modify global state, and where partial updates are dangerous.
 			-- So we json encode the error and the event data and then throw, so the CU will discard the memory and still process the event data.
 			-- An alternative approach is to modify the implementation of ao.result - to also return the Output on error.
 			-- Reference: https://github.com/permaweb/ao/blob/76a618722b201430a372894b3e2753ac01e63d3d/dev-cli/src/starters/lua/ao.lua#L284-L287
@@ -79,11 +119,133 @@ local function addEventingHandler(handlerName, pattern, handleFn, critical, prin
 	end)
 end
 
-addEventingHandler("test", function()
+local function updateLastKnownMessage(msg)
+	if msg.Timestamp >= LastKnownMessageTimestamp then
+		LastKnownMessageTimestamp = msg.Timestamp
+		LastKnownMessageId = msg.Id
+	end
+end
+
+-- handlers that are critical should raise unhandled errors so the CU will discard the memory on error
+local CRITICAL = true
+
+-- Sanitize inputs before every interaction
+local function assertAndSanitizeInputs(msg)
+	assert(
+		-- TODO: replace this with LastKnownMessageTimestamp after node release 23.0.0
+		msg.Timestamp and tonumber(msg.Timestamp) >= 0,
+		"Timestamp must be greater than or equal to the last known message timestamp of "
+			.. LastKnownMessageTimestamp
+			.. " but was "
+			.. msg.Timestamp
+	)
+	assert(msg.From, "From is required")
+	assert(msg.Tags and type(msg.Tags) == "table", "Tags are required")
+
+	msg.Tags = utils.validateAndSanitizeInputs(msg.Tags)
+	msg.From = utils.formatAddress(msg.From)
+	msg.Timestamp = msg.Timestamp and tonumber(msg.Timestamp) -- Timestamp should always be provided by the CU
+end
+
+addEventingHandler("sanitize", function()
 	return "continue"
 end, function(msg)
-	print(msg)
+	assertAndSanitizeInputs(msg)
+	updateLastKnownMessage(msg)
+end, CRITICAL, false)
+
+addEventingHandler(
+	"proposeAddController",
+	Handlers.utils.hasMatchingTag("Action", "Propose-Add-Controller"),
+	function(msg)
+		assert(msg.Tags.Controller, "Controller is required")
+		assert(not Tessera[msg.Tags.Controller], "Controller already exists")
+		assert(Tessera[msg.From], "Sender is not a registered Controller!")
+		local proposalName = "Add-Controller_" .. msg.Tags.Controller
+		assert(not Proposals[proposalName], "Proposal already exists")
+
+		-- TODO: ALLOW FOR VOTING AT THE TIME OF PROPOSAL CREATION VIA VOTE TAG
+
+		ProposalNumber = ProposalNumber + 1
+
+		--- @type AddControllerProposalData
+		local newProposal = {
+			proposalNumber = ProposalNumber,
+			type = "Add-Controller",
+			controller = msg.Tags.Controller,
+			yays = {},
+			nays = {},
+		}
+		Proposals[proposalName] = newProposal
+		local returnData = utils.deepCopy(newProposal)
+		--- @diagnostic disable-next-line: inject-field
+		returnData.proposalName = proposalName
+
+		Send(msg, {
+			Target = msg.From,
+			Action = "Propose-Add-Controller-Notice",
+			Data = returnData,
+		})
+	end
+)
+
+addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), function(msg)
+	assert(msg.Tags["Proposal-Number"], "Proposal-Number is required")
+	assert(msg.Tags.Vote == "yay" or msg.Tags.Vote == "nay", "A Vote of 'yay' or 'nay' is required")
+	local proposal = Proposals[msg.Tags.ProposalName]
+	assert(proposal, "Proposal does not exist")
+	assert(Tessera[msg.From], "Sender is not a registered Controller!")
+
+	if string.lower(msg.Tags.Vote) == "yay" then
+		proposal.yays[msg.From] = true
+		proposal.nays[msg.From] = nil
+	elseif msg.Tags.Vote == "Nay" then
+		proposal.nays[msg.From] = true
+		proposal.yays[msg.From] = nil
+	end
+
+	-- Check whether the proposal has passed...
+	local yaysCount = utils.lengthOfTable(proposal.yays)
+	local naysCount = utils.lengthOfTable(proposal.nays)
+	local majorityThreshold = math.floor(utils.lengthOfTable(Tessera) / 2) + 1
+	if yaysCount >= majorityThreshold then
+		-- Proposal has passed
+		if proposal.type == "Add-Controller" then
+			Tessera[proposal.controller] = true
+		elseif proposal.type == "Remove-Controller" then
+			Tessera[proposal.controller] = nil
+			-- TODO: Implementations for transfer process and eval
+		end
+		-- TODO: Notify Tessera of result
+		Proposals[msg.Tags.ProposalName] = nil
+	elseif naysCount >= majorityThreshold then
+		-- Proposal has failed
+		-- TODO: Notify Tessera of result
+		Proposals[msg.Tags.ProposalName] = nil
+	end
+
 	Send(msg, {
-		Data = "Hello World",
+		Target = msg.From,
+		Action = "Vote-Notice",
+		Data = {
+			ProposalName = msg.Tags.ProposalName,
+			Vote = msg.Tags.Vote,
+		},
+	})
+end)
+
+addEventingHandler("controllers", Handlers.utils.hasMatchingTag("Action", "Get-Controllers"), function(msg)
+	Send(msg, {
+		Target = msg.From,
+		Action = "Get-Controllers-Notice",
+		Data = Tessera,
+	})
+end)
+
+addEventingHandler("proposals", Handlers.utils.hasMatchingTag("Action", "Get-Proposals"), function(msg)
+	Send(msg, {
+		Target = msg.From,
+		Action = "Get-Proposals-Notice",
+		Data = Proposals,
 	})
 end)
