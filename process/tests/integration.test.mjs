@@ -163,6 +163,102 @@ describe('AOS Handlers:', () => {
       });
     });
 
+    it('should allow casting a "Yay" vote along with the proposal', async () => {
+      const result = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Propose-Add-Controller' },
+            { name: 'Controller', value: 'new-controller' },
+            { name: 'Vote', value: 'Yay' },
+          ],
+        },
+        mem: testMemory,
+      });
+      const replyMessage = result.Messages[0];
+      const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
+      assert.notEqual(actionTag, undefined, "Expected an action tag");
+      assert.equal(actionTag.value, 'Propose-Add-Controller-Notice');
+      assert.deepEqual(JSON.parse(replyMessage.Data), {
+        proposalNumber: 1,
+        yays: {
+          [PROCESS_OWNER]: true
+        },
+        nays: [],
+        proposalName: "Add-Controller_new-controller",
+        controller: 'new-controller',
+        type: "Add-Controller",
+      });
+
+      const getProposalsResult = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Get-Proposals' },
+          ],
+        },
+        mem: result.Memory,
+      });
+      const proposals = JSON.parse(getProposalsResult.Messages[0].Data);
+      assert.deepEqual(proposals, {
+        "Add-Controller_new-controller": {
+          proposalNumber: 1,
+          yays: {
+            [PROCESS_OWNER]: true
+          },
+          nays: [],
+          controller: 'new-controller',
+          type: "Add-Controller",
+        }
+      });
+    });
+
+    it('should allow casting a "Nay" vote along with the proposal', async () => {
+      const result = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Propose-Add-Controller' },
+            { name: 'Controller', value: 'new-controller' },
+            { name: 'Vote', value: 'nay' },
+          ],
+        },
+        mem: testMemory,
+      });
+      const replyMessage = result.Messages[0];
+      const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
+      assert.notEqual(actionTag, undefined, "Expected an action tag");
+      assert.equal(actionTag.value, 'Propose-Add-Controller-Notice');
+      assert.deepEqual(JSON.parse(replyMessage.Data), {
+        proposalNumber: 1,
+        yays: [],
+        nays: {
+          [PROCESS_OWNER]: true
+        },
+        proposalName: "Add-Controller_new-controller",
+        controller: 'new-controller',
+        type: "Add-Controller",
+      });
+
+      const getProposalsResult = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Get-Proposals' },
+          ],
+        },
+        mem: result.Memory,
+      });
+      const proposals = JSON.parse(getProposalsResult.Messages[0].Data);
+      assert.deepEqual(proposals, {
+        "Add-Controller_new-controller": {
+          proposalNumber: 1,
+          yays: [],
+          nays: {
+            [PROCESS_OWNER]: true
+          },
+          controller: 'new-controller',
+          type: "Add-Controller",
+        }
+      });
+    });
+
     it('should disallow creation of a duplicate proposal', async () => {
       const result = await handle({
         options: {

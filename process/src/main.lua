@@ -163,8 +163,11 @@ addEventingHandler(
 		assert(Tessera[msg.From], "Sender is not a registered Controller!")
 		local proposalName = "Add-Controller_" .. msg.Tags.Controller
 		assert(not Proposals[proposalName], "Proposal already exists")
-
-		-- TODO: ALLOW FOR VOTING AT THE TIME OF PROPOSAL CREATION VIA VOTE TAG
+		local vote = msg.Tags.Vote
+		if vote ~= nil then
+			vote = type(vote) == "string" and string.lower(vote) or "error"
+			assert(vote == "yay" or vote == "nay", "Vote, if provided, must be 'yay' or 'nay'")
+		end
 
 		ProposalNumber = ProposalNumber + 1
 
@@ -176,6 +179,11 @@ addEventingHandler(
 			yays = {},
 			nays = {},
 		}
+		if vote == "yay" then
+			newProposal.yays[msg.From] = true
+		elseif vote == "nay" then
+			newProposal.nays[msg.From] = true
+		end
 		Proposals[proposalName] = newProposal
 		local returnData = utils.deepCopy(newProposal)
 		--- @diagnostic disable-next-line: inject-field
