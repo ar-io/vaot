@@ -513,4 +513,17 @@ function utils.deepCopy(original, excludedFields)
 	return deepCopyHelper(original, nil)
 end
 
+--- Finds an element in an array that matches a predicate
+--- @param tbl table The table to search
+--- @param predicate fun(key, value) : boolean The predicate to match
+--- @return any|nil,any|nil # The found key and value or nils if not found
+function utils.findInTable(tbl, predicate)
+	for key, value in pairs(tbl) do
+		if predicate(key, value) then
+			return key, value
+		end
+	end
+	return nil, nil
+end
+
 return utils

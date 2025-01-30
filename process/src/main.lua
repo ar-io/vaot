@@ -199,8 +199,14 @@ addEventingHandler(
 
 addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), function(msg)
 	assert(msg.Tags["Proposal-Number"], "Proposal-Number is required")
-	assert(msg.Tags.Vote == "yay" or msg.Tags.Vote == "nay", "A Vote of 'yay' or 'nay' is required")
-	local proposal = Proposals[msg.Tags.ProposalName]
+	local vote = msg.Tags.Vote
+	if vote ~= nil then
+		vote = type(vote) == "string" and string.lower(vote) or "error"
+	end
+	assert(vote and vote == "yay" or vote == "nay", "A Vote of 'yay' or 'nay' is required")
+	local _, proposal = utils.findInTable(Proposals, function(_, prop)
+		return prop.proposalNumber == msg.Tags["Proposal-Number"]
+	end)
 	assert(proposal, "Proposal does not exist")
 	assert(Tessera[msg.From], "Sender is not a registered Controller!")
 

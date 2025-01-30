@@ -287,4 +287,63 @@ describe('AOS Handlers:', () => {
       assert(errorTag.value.includes('Proposal already exists'));
     });
   });
+
+  describe("Vote", () => {
+    let testMemory;
+    before(async () => {
+      const result = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Propose-Add-Controller' },
+            { name: 'Controller', value: 'new-controller' },
+          ],
+        },
+      });
+      testMemory = result.Memory;
+    });
+
+    it('should not allow submitting the vote from a non-controller', async () => {
+      const result = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Vote' },
+            { name: 'Proposal-Number', value: '1' },
+            { name: 'Vote', value: 'Yay' },
+          ],
+          From: "non-controller",
+          Owner: "non-controller",
+        },
+        mem: testMemory,
+      });
+      assert.equal(result.Messages?.length, 1, "Expected one message");
+      const replyMessage = result.Messages[0];
+      const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
+      assert.notEqual(actionTag, undefined, "Expected an action tag");
+      assert.equal(actionTag.value, 'Invalid-Vote-Notice');
+      const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
+      assert(errorTag.value.includes('Sender is not a registered Controller!'));
+      assert(replyMessage.Data.includes('Sender is not a registered Controller!'));
+    });
+
+    it('should not allow voting on a non-existent proposal', async () => {
+      const result = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Vote' },
+            { name: 'Proposal-Number', value: '2' },
+            { name: 'Vote', value: 'Yay' },
+          ],
+        },
+        mem: testMemory,
+      });
+      const { Memory, ...rest } = result;
+      const replyMessage = result.Messages[0];
+      const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
+      assert.notEqual(actionTag, undefined, "Expected an action tag");
+      assert.equal(actionTag.value, 'Invalid-Vote-Notice');
+      const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
+      assert(errorTag.value.includes('Proposal does not exist'));
+      assert(replyMessage.Data.includes('Proposal does not exist'));
+    });
+  });
 });
