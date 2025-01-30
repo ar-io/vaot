@@ -154,6 +154,36 @@ end, function(msg)
 	updateLastKnownMessage(msg)
 end, CRITICAL, false)
 
+--- @param proposalName ProposalName
+--- @param msg ParsedMessage
+function handleMaybeVoteQuorum(proposalName, msg)
+	-- Check whether the proposal has passed...
+	local proposal = Proposals[proposalName]
+	local yaysCount = utils.lengthOfTable(proposal.yays)
+	local naysCount = utils.lengthOfTable(proposal.nays)
+	local majorityThreshold = math.floor(utils.lengthOfTable(Tessera) / 2) + 1
+	print("majorityThreshold " .. majorityThreshold)
+	if yaysCount >= majorityThreshold then
+		-- Proposal has passed
+		if proposal.type == "Add-Controller" then
+			Tessera[proposal.controller] = true
+		elseif proposal.type == "Remove-Controller" then
+			Tessera[proposal.controller] = nil
+			-- TODO: Implementations for transfer process and eval
+		end
+		-- TODO: Notify Tessera of result
+		Proposals[proposalName] = nil
+	elseif naysCount >= majorityThreshold then
+		-- Proposal has failed
+		-- TODO: Notify Tessera of result
+		Proposals[proposalName] = nil
+	elseif yaysCount + naysCount >= utils.lengthOfTable(Tessera) then
+		-- Proposal has reached quorum and failed
+		-- TODO: Notify Tessera of result
+		Proposals[proposalName] = nil
+	end
+end
+
 addEventingHandler(
 	"proposeAddController",
 	Handlers.utils.hasMatchingTag("Action", "Propose-Add-Controller"),
@@ -185,6 +215,7 @@ addEventingHandler(
 			newProposal.nays[msg.From] = true
 		end
 		Proposals[proposalName] = newProposal
+
 		local returnData = utils.deepCopy(newProposal)
 		--- @diagnostic disable-next-line: inject-field
 		returnData.proposalName = proposalName
@@ -194,6 +225,8 @@ addEventingHandler(
 			Action = "Propose-Add-Controller-Notice",
 			Data = returnData,
 		})
+
+		handleMaybeVoteQuorum(proposalName, msg)
 	end
 )
 
@@ -204,7 +237,7 @@ addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), func
 		vote = type(vote) == "string" and string.lower(vote) or "error"
 	end
 	assert(vote and vote == "yay" or vote == "nay", "A Vote of 'yay' or 'nay' is required")
-	local _, proposal = utils.findInTable(Proposals, function(_, prop)
+	local proposalName, proposal = utils.findInTable(Proposals, function(_, prop)
 		return prop.proposalNumber == msg.Tags["Proposal-Number"]
 	end)
 	assert(proposal, "Proposal does not exist")
@@ -218,34 +251,13 @@ addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), func
 		proposal.yays[msg.From] = nil
 	end
 
-	-- Check whether the proposal has passed...
-	local yaysCount = utils.lengthOfTable(proposal.yays)
-	local naysCount = utils.lengthOfTable(proposal.nays)
-	local majorityThreshold = math.floor(utils.lengthOfTable(Tessera) / 2) + 1
-	if yaysCount >= majorityThreshold then
-		-- Proposal has passed
-		if proposal.type == "Add-Controller" then
-			Tessera[proposal.controller] = true
-		elseif proposal.type == "Remove-Controller" then
-			Tessera[proposal.controller] = nil
-			-- TODO: Implementations for transfer process and eval
-		end
-		-- TODO: Notify Tessera of result
-		Proposals[msg.Tags.ProposalName] = nil
-	elseif naysCount >= majorityThreshold then
-		-- Proposal has failed
-		-- TODO: Notify Tessera of result
-		Proposals[msg.Tags.ProposalName] = nil
-	end
-
 	Send(msg, {
 		Target = msg.From,
 		Action = "Vote-Notice",
-		Data = {
-			ProposalName = msg.Tags.ProposalName,
-			Vote = msg.Tags.Vote,
-		},
+		Data = proposal,
 	})
+
+	handleMaybeVoteQuorum(proposalName, msg)
 end)
 
 addEventingHandler("controllers", Handlers.utils.hasMatchingTag("Action", "Get-Controllers"), function(msg)
