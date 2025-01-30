@@ -68,3 +68,67 @@ export function parseEventsFromResult(result) {
       ?.filter((event) => Object.keys(event).length && event['_e']) || []
   );
 }
+
+export async function getControllers(memory) {
+  const result = await handle({
+    options: {
+      Tags: [{ name: 'Action', value: 'Get-Controllers' }],
+    },
+    mem: memory,
+  });
+  return Object.keys(JSON.parse(result.Messages[0].Data)).sort();
+}
+
+export async function getProposals(memory) {
+  const result = await handle({
+    options: {
+      Tags: [{ name: 'Action', value: 'Get-Proposals' }],
+    },
+    mem: memory,
+  });
+  const proposals = JSON.parse(result.Messages[0].Data);
+  return Array.isArray(proposals) ? {} : proposals;
+}
+
+export async function rubberStampProposal({
+  proposalTags,
+  memory,
+}){
+  const controllers = await getControllers(memory);
+  const passThreshold = Math.floor(controllers.length / 2) + 1;
+  const proposeResult = await handle({
+    options: {
+      Tags: [
+        ...proposalTags,
+        { name: 'Vote', value: 'yay' },
+      ],
+      From: controllers[0],
+      Owner: controllers[0],
+    },
+    mem: memory,
+  });
+  const proposalNumber = JSON.parse(proposeResult.Messages[0].Data).proposalNumber;
+  let workingMemory = proposeResult.Memory;
+  for (const controller of controllers.slice(1, passThreshold)) {
+    const voteResult = await handle({
+      options: {
+        Tags: [
+          { name: 'Action', value: 'Vote' },
+          { name: 'Proposal-Number', value: proposalNumber },
+          { name: 'Vote', value: 'yay' },
+        ],
+        From: controller,
+        Owner: controller,
+      },
+      mem: workingMemory,
+    });
+    workingMemory = voteResult.Memory;
+  }
+  const proposals = await getProposals(workingMemory);
+  const maybeProposal = Object.values(proposals).filter((p) => p.proposalNumber === proposalNumber).shift();
+  assert(!maybeProposal, "Proposal not successfully rubber stamped!");
+  return {
+    memory: workingMemory,
+    proposalNumber
+  };
+}

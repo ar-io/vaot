@@ -1,50 +1,17 @@
 import { describe, it, before } from 'node:test';
-import { handle, parseEventsFromResult } from './helpers.mjs';
+import { getControllers, getProposals, handle, parseEventsFromResult, rubberStampProposal } from './helpers.mjs';
 import {
   PROCESS_OWNER,
-  STUB_MESSAGE_ID,
-  STUB_TIMESTAMP,
 } from '../tools/constants.mjs';
 import assert from 'node:assert';
 
 describe('AOS Handlers:', () => {
-  // it('should return hello world', async () => {
-  //   const result = await handle({
-  //     options: {
-  //       Tags: [{ name: 'Action', value: 'Whatever' }],
-  //     },
-  //   });
-  //   assert.equal(result.Messages?.[0]?.Data, 'Hello World');
-  //   const events = parseEventsFromResult(result);
-  //   assert.equal(events.length, 1);
-  //   assert.deepStrictEqual(events[0], {
-  //     Action: 'Whatever',
-  //     Timestamp: STUB_TIMESTAMP,
-  //     _e: 1,
-  //     'Message-Id': STUB_MESSAGE_ID,
-  //     'From-Formatted': PROCESS_OWNER,
-  //     From: PROCESS_OWNER,
-  //   });
-  // });
-
   it('should have the process owner as the only controller on boot', async () => {
-    const result = await handle({
-      options: {
-        Tags: [{ name: 'Action', value: 'Get-Controllers' }],
-      },
-    });
-    assert.deepStrictEqual(result.Messages?.[0]?.Data, JSON.stringify({
-      [PROCESS_OWNER]: true,
-    }));
+    assert.deepStrictEqual(await getControllers(), [PROCESS_OWNER]);
   });
 
   it('should have no proposals on boot', async () => {
-    const result = await handle({
-      options: {
-        Tags: [{ name: 'Action', value: 'Get-Proposals' }],
-      },
-    });
-    assert.deepStrictEqual(result.Messages?.[0]?.Data, JSON.stringify([]));
+    assert.deepStrictEqual(await getProposals(), {});
   });
 
   describe("Propose-Add-Controller", () => {
@@ -143,15 +110,7 @@ describe('AOS Handlers:', () => {
         type: "Add-Controller",
       });
 
-      const getProposalsResult = await handle({
-        options: {
-          Tags: [
-            { name: 'Action', value: 'Get-Proposals' },
-          ],
-        },
-        mem: result.Memory,
-      });
-      const proposals = JSON.parse(getProposalsResult.Messages[0].Data);
+      const proposals = await getProposals(result.Memory);
       assert.deepEqual(proposals, {
         "Add-Controller_new-controller": {
           proposalNumber: 1,
@@ -190,30 +149,13 @@ describe('AOS Handlers:', () => {
       });
 
       // The proposal should now be completed
-      const getProposalsResult = await handle({
-        options: {
-          Tags: [
-            { name: 'Action', value: 'Get-Proposals' },
-          ],
-        },
-        mem: result.Memory,
-      });
-      const proposals = JSON.parse(getProposalsResult.Messages[0].Data);
-      assert.deepEqual(proposals, []);
+      assert.deepEqual(await getProposals(), {});
 
       // The controller should now be added
-      const getControllersResult = await handle({
-        options: {
-          Tags: [
-            { name: 'Action', value: 'Get-Controllers' },
-          ],
-        },
-        mem: result.Memory,
-      });
-      assert.deepEqual(JSON.parse(getControllersResult.Messages[0].Data), {
-        [PROCESS_OWNER]: true,
-        ['new-controller']: true,
-      });
+      assert.deepEqual(await getControllers(result.Memory), [
+        PROCESS_OWNER,
+        'new-controller',
+      ]);
     });
 
     it('should allow casting a "Nay" vote along with the proposal', async () => {
@@ -243,16 +185,8 @@ describe('AOS Handlers:', () => {
       });
 
       // The proposal should now be completed
-      const getProposalsResult = await handle({
-        options: {
-          Tags: [
-            { name: 'Action', value: 'Get-Proposals' },
-          ],
-        },
-        mem: result.Memory,
-      });
-      const proposals = JSON.parse(getProposalsResult.Messages[0].Data);
-      assert.deepEqual(proposals, []);
+      const proposals = await getProposals(result.Memory);
+      assert.deepEqual(proposals, {});
     });
 
     it('should disallow creation of a duplicate proposal', async () => {
@@ -370,16 +304,8 @@ describe('AOS Handlers:', () => {
         });
 
         // Ensure that the vote is now over
-        const getProposalsResult = await handle({
-          options: {
-            Tags: [
-              { name: 'Action', value: 'Get-Proposals' },
-            ],
-          },
-          mem: result.Memory,
-        });
-        const proposals = JSON.parse(getProposalsResult.Messages[0].Data);
-        assert.deepEqual(proposals, []);
+        const proposals = await getProposals(result.Memory);
+        assert.deepEqual(proposals, {});
       });
 
       it("should allow voting nay on a proposal", async () => {
@@ -409,16 +335,8 @@ describe('AOS Handlers:', () => {
         });
 
         // Ensure that the vote is now over
-        const getProposalsResult = await handle({
-          options: {
-            Tags: [
-              { name: 'Action', value: 'Get-Proposals' },
-            ],
-          },
-          mem: result2.Memory,
-        });
-        const proposals = JSON.parse(getProposalsResult.Messages[0].Data);
-        assert.deepEqual(proposals, []);
+        const proposals = await getProposals(result2.Memory);
+        assert.deepEqual(proposals, {});
       });
 
       describe("with multiple controllers", () => {
@@ -433,16 +351,8 @@ describe('AOS Handlers:', () => {
             },
             mem: testMemory,
           });
-          const controllersResult = await handle({
-            options: {
-              Tags: [{ name: 'Action', value: 'Get-Controllers' }],
-            },
-            mem: result.Memory,
-          });
-          assert.deepStrictEqual(JSON.parse(controllersResult.Messages?.[0]?.Data), {
-            [PROCESS_OWNER]: true,
-            ['new-controller']: true,
-          });
+          const controllers = await getControllers(result.Memory);
+          assert.deepStrictEqual(controllers, [PROCESS_OWNER, 'new-controller']);
           const result2 = await handle({
             options: {
               Tags: [
@@ -517,31 +427,12 @@ describe('AOS Handlers:', () => {
         });
 
         // Ensure the proposal is now completed
-        const getProposalsResult = await handle({
-          options: {
-            Tags: [
-              { name: 'Action', value: 'Get-Proposals' },
-            ],
-          },
-          mem: result2.Memory,
-        });
-        const proposals = JSON.parse(getProposalsResult.Messages[0].Data);
-        assert.deepEqual(proposals, []);
+        const proposals = await getProposals(result2.Memory);
+        assert.deepEqual(proposals, {});
 
         // Ensure that the new controller is now added
-        const getControllersResult = await handle({
-          options: {
-            Tags: [
-              { name: 'Action', value: 'Get-Controllers' },
-            ],
-          },
-          mem: result2.Memory,
-        });
-        assert.deepEqual(JSON.parse(getControllersResult.Messages[0].Data), {
-          [PROCESS_OWNER]: true,
-          ['new-controller']: true,
-          ['new-controller2']: true,
-        });
+        const controllers = await getControllers(result2.Memory);
+        assert.deepEqual(controllers, [PROCESS_OWNER, 'new-controller', 'new-controller2']);
       });
 
       it("should end the proposal with a quorum of nay votes", async () => {
@@ -579,30 +470,12 @@ describe('AOS Handlers:', () => {
         });
 
         // Ensure the proposal is now completed
-        const getProposalsResult = await handle({
-          options: {
-            Tags: [
-              { name: 'Action', value: 'Get-Proposals' },
-            ],
-          },
-          mem: result2.Memory,
-        });
-        const proposals = JSON.parse(getProposalsResult.Messages[0].Data);
-        assert.deepEqual(proposals, []);
+        const proposals = await getProposals(result2.Memory);
+        assert.deepEqual(proposals, {});
 
         // Ensure that the controller was NOT added
-        const getControllersResult = await handle({
-          options: {
-            Tags: [
-              { name: 'Action', value: 'Get-Controllers' },
-            ],
-          },
-          mem: result2.Memory,
-        });
-        assert.deepEqual(JSON.parse(getControllersResult.Messages[0].Data), {
-          [PROCESS_OWNER]: true,
-          ['new-controller']: true,
-        });
+        const controllers = await getControllers(result2.Memory);
+        assert.deepEqual(controllers, [PROCESS_OWNER, 'new-controller']);
       });
 
       it("should end the proposal on a split vote with no majority", async () => {
@@ -641,30 +514,54 @@ describe('AOS Handlers:', () => {
         });
 
         // Ensure the proposal is now completed
-        const getProposalsResult = await handle({
-          options: {
-            Tags: [
-              { name: 'Action', value: 'Get-Proposals' },
-            ],
-          },
-          mem: result2.Memory,
-        });
-        const proposals = JSON.parse(getProposalsResult.Messages[0].Data);
-        assert.deepEqual(proposals, []);
+        const proposals = await getProposals(result2.Memory);
+        assert.deepEqual(proposals, {});
 
         // Ensure that the controller was NOT added
-        const getControllersResult = await handle({
+        const controllers = await getControllers(result2.Memory);
+        assert.deepEqual(controllers, [PROCESS_OWNER, 'new-controller']);
+      });
+
+      it("should pass the proposal with 2 out of 3 yay votes", async () => {
+        // After this, PROCESS_OWNER, 'new-controller', and 'new-controller3' should be controllers
+        const { memory: rubberStampMemory } = await rubberStampProposal({
+          proposalTags: [
+            { name: 'Action', value: 'Propose-Add-Controller' },
+            { name: 'Controller', value: 'new-controller3' },
+          ],
+          memory: testMemory,
+        })
+        const controllers = await getControllers(rubberStampMemory);
+        assert.deepEqual(controllers, [PROCESS_OWNER, 'new-controller', 'new-controller3']);
+        
+        // The vote for 'new-controller2' now needs 2 of 3 yay votes to pass and has none yet
+        const firstVoteresult = await handle({
           options: {
             Tags: [
-              { name: 'Action', value: 'Get-Controllers' },
+              { name: 'Action', value: 'Vote' },
+              { name: 'Proposal-Number', value: '2' },
+              { name: 'Vote', value: 'Yay' },
+            ],
+            From: "new-controller3",
+            Owner: "new-controller3",
+          },
+          mem: rubberStampMemory,
+        });
+
+        const result = await handle({
+          options: {
+            Tags: [
+              { name: 'Action', value: 'Vote' },
+              { name: 'Proposal-Number', value: '2' },
+              { name: 'Vote', value: 'Yay' },
             ],
           },
-          mem: result2.Memory,
+          mem: firstVoteresult.Memory,
         });
-        assert.deepEqual(JSON.parse(getControllersResult.Messages[0].Data), {
-          [PROCESS_OWNER]: true,
-          ['new-controller']: true,
-        });
+
+        // Ensure that 'new-controller2' is now added
+        const controllers2 = await getControllers(result.Memory);
+        assert.deepEqual(controllers2, [PROCESS_OWNER, 'new-controller', 'new-controller2', 'new-controller3']);
       });
     });
   });
