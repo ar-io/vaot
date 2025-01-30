@@ -163,6 +163,21 @@ function handleMaybeVoteQuorum(proposalName, msg)
 	local naysCount = utils.lengthOfTable(proposal.nays)
 	local majorityThreshold = math.floor(utils.lengthOfTable(Tessera) / 2) + 1
 	print("majorityThreshold " .. majorityThreshold)
+
+	--- @param accepted boolean
+	local function notifyProposalComplete(accepted)
+		local returnData = utils.deepCopy(proposal)
+		--- @diagnostic disable-next-line: inject-field
+		returnData.proposalName = proposalName
+		for address, _ in pairs(Tessera) do
+			Send(msg, {
+				Target = address,
+				Action = accepted and "Proposal-Accepted-Notice" or "Proposal-Rejected-Notice",
+				Data = returnData,
+			})
+		end
+	end
+
 	if yaysCount >= majorityThreshold then
 		-- Proposal has passed
 		if proposal.type == "Add-Controller" then
@@ -171,16 +186,17 @@ function handleMaybeVoteQuorum(proposalName, msg)
 			Tessera[proposal.controller] = nil
 			-- TODO: Implementations for transfer process and eval
 		end
-		-- TODO: Notify Tessera of result
+
 		Proposals[proposalName] = nil
+		notifyProposalComplete(true)
 	elseif naysCount >= majorityThreshold then
 		-- Proposal has failed
-		-- TODO: Notify Tessera of result
 		Proposals[proposalName] = nil
+		notifyProposalComplete(false)
 	elseif yaysCount + naysCount >= utils.lengthOfTable(Tessera) then
 		-- Proposal has reached quorum and failed
-		-- TODO: Notify Tessera of result
 		Proposals[proposalName] = nil
+		notifyProposalComplete(false)
 	end
 end
 
@@ -188,9 +204,9 @@ addEventingHandler(
 	"proposeAddController",
 	Handlers.utils.hasMatchingTag("Action", "Propose-Add-Controller"),
 	function(msg)
+		assert(Tessera[msg.From], "Sender is not a registered Controller!")
 		assert(msg.Tags.Controller, "Controller is required")
 		assert(not Tessera[msg.Tags.Controller], "Controller already exists")
-		assert(Tessera[msg.From], "Sender is not a registered Controller!")
 		local proposalName = "Add-Controller_" .. msg.Tags.Controller
 		assert(not Proposals[proposalName], "Proposal already exists")
 		local vote = msg.Tags.Vote
@@ -230,7 +246,54 @@ addEventingHandler(
 	end
 )
 
+addEventingHandler(
+	"proposeRemoveController",
+	Handlers.utils.hasMatchingTag("Action", "Propose-Remove-Controller"),
+	function(msg)
+		assert(Tessera[msg.From], "Sender is not a registered Controller!")
+		assert(msg.Tags.Controller, "Controller is required")
+		assert(Tessera[msg.Tags.Controller], "Controller is not recognized")
+		local proposalName = "Remove-Controller_" .. msg.Tags.Controller
+		assert(not Proposals[proposalName], "Proposal already exists")
+		local vote = msg.Tags.Vote
+		if vote ~= nil then
+			vote = type(vote) == "string" and string.lower(vote) or "error"
+			assert(vote == "yay" or vote == "nay", "Vote, if provided, must be 'yay' or 'nay'")
+		end
+
+		ProposalNumber = ProposalNumber + 1
+
+		--- @type RemoveControllerProposalData
+		local newProposal = {
+			proposalNumber = ProposalNumber,
+			type = "Remove-Controller",
+			controller = msg.Tags.Controller,
+			yays = {},
+			nays = {},
+		}
+		if vote == "yay" then
+			newProposal.yays[msg.From] = true
+		elseif vote == "nay" then
+			newProposal.nays[msg.From] = true
+		end
+		Proposals[proposalName] = newProposal
+
+		local returnData = utils.deepCopy(newProposal)
+		--- @diagnostic disable-next-line: inject-field
+		returnData.proposalName = proposalName
+
+		Send(msg, {
+			Target = msg.From,
+			Action = "Propose-Remove-Controller-Notice",
+			Data = returnData,
+		})
+
+		handleMaybeVoteQuorum(proposalName, msg)
+	end
+)
+
 addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), function(msg)
+	assert(Tessera[msg.From], "Sender is not a registered Controller!")
 	assert(msg.Tags["Proposal-Number"], "Proposal-Number is required")
 	local vote = msg.Tags.Vote
 	if vote ~= nil then
@@ -241,7 +304,6 @@ addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), func
 		return prop.proposalNumber == msg.Tags["Proposal-Number"]
 	end)
 	assert(proposal, "Proposal does not exist")
-	assert(Tessera[msg.From], "Sender is not a registered Controller!")
 
 	if string.lower(msg.Tags.Vote) == "yay" then
 		proposal.yays[msg.From] = true

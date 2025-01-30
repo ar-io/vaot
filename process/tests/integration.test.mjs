@@ -65,6 +65,7 @@ describe('AOS Handlers:', () => {
       });
     }
 
+    // TODO: Validation of proposal pass/fail messages
     const validProposalTest = async (proposalType, options, expectedProposalName, expectedProposal, expectProposalEnd = true) => {
       const result = await handle({ options, mem: testMemory });
       const replyMessage = result.Messages[0];
@@ -574,5 +575,7 @@ describe('AOS Handlers:', () => {
           }, 'Controller is not recognized');
       });
     });
+
+    // TODO: Refactor "Vote" block to support both Add-Controller and Remove-Controller proposals
   });
 });
