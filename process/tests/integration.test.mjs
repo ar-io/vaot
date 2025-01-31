@@ -2,6 +2,7 @@ import { describe, it, before } from 'node:test';
 import { getControllers, getProposals, handle, parseEventsFromResult, rubberStampProposal } from './helpers.mjs';
 import {
   PROCESS_OWNER,
+  STUB_MESSAGE_ID,
 } from '../tools/constants.mjs';
 import assert from 'node:assert';
 
@@ -103,6 +104,7 @@ describe('AOS Handlers:', () => {
           `${proposalType}_${controller}`,
           {
             proposalNumber: 1,
+            msgId: STUB_MESSAGE_ID,
             yays: [],
             nays: [],
             controller,
@@ -126,6 +128,7 @@ describe('AOS Handlers:', () => {
           `${proposalType}_${controller}`,
           {
             proposalNumber: 1,
+            msgId: STUB_MESSAGE_ID,
             yays: {
               [PROCESS_OWNER]: true
             },
@@ -159,6 +162,7 @@ describe('AOS Handlers:', () => {
           `${proposalType}_${controller}`,
           {
             proposalNumber: 1,
+            msgId: STUB_MESSAGE_ID,
             yays: [],
             nays: {
               [PROCESS_OWNER]: true
@@ -334,6 +338,7 @@ describe('AOS Handlers:', () => {
           assert.equal(actionTag.value, 'Vote-Notice');
           assert.deepEqual(JSON.parse(replyMessage.Data), {
             proposalNumber: 1,
+            msgId: STUB_MESSAGE_ID,
             yays: {
               [PROCESS_OWNER]: true
             },
@@ -365,6 +370,7 @@ describe('AOS Handlers:', () => {
           assert.equal(actionTag.value, 'Vote-Notice');
           assert.deepEqual(JSON.parse(replyMessage.Data), {
             proposalNumber: 1,
+            msgId: STUB_MESSAGE_ID,
             yays: [],
             nays: {
               [PROCESS_OWNER]: true
@@ -421,6 +427,7 @@ describe('AOS Handlers:', () => {
             const proposals = JSON.parse(result.Messages[0].Data);
             assert.deepEqual(proposals, {
               proposalNumber: 2,
+              msgId: STUB_MESSAGE_ID,
               yays: {
                 ['new-controller']: true
               },
@@ -456,6 +463,7 @@ describe('AOS Handlers:', () => {
           });
           assert.deepEqual(JSON.parse(result2.Messages[0].Data), {
             proposalNumber: 2,
+            msgId: STUB_MESSAGE_ID,
             yays: {
               ['new-controller']: true,
               [PROCESS_OWNER]: true,
@@ -499,6 +507,7 @@ describe('AOS Handlers:', () => {
           });
           assert.deepEqual(JSON.parse(result2.Messages[0].Data), {
             proposalNumber: 2,
+            msgId: STUB_MESSAGE_ID,
             yays: [],
             nays: {
               ['new-controller']: true,
@@ -542,6 +551,7 @@ describe('AOS Handlers:', () => {
           });
           assert.deepEqual(JSON.parse(result2.Messages[0].Data), {
             proposalNumber: 2,
+            msgId: STUB_MESSAGE_ID,
             yays: {
               [PROCESS_OWNER]: true,
             },
@@ -574,7 +584,7 @@ describe('AOS Handlers:', () => {
           assert.deepEqual(controllers, [PROCESS_OWNER, 'new-controller', 'new-controller3']);
           
           // The vote for 'new-controller2' now needs 2 of 3 yay votes to pass and has none yet
-          const firstVoteresult = await handle({
+          const firstVoteResult = await handle({
             options: {
               Tags: [
                 { name: 'Action', value: 'Vote' },
@@ -595,7 +605,7 @@ describe('AOS Handlers:', () => {
                 { name: 'Vote', value: 'yay' },
               ],
             },
-            mem: firstVoteresult.Memory,
+            mem: firstVoteResult.Memory,
           });
     
           // Ensure that 'new-controller2' is now added

@@ -5,6 +5,7 @@ Owner = Owner or ao.env.Process.Owner
 
 --- @alias WalletAddress string
 --- @alias ProcessId string
+--- @alias MessageId string
 
 -- Tessera are voting tokens, one per WalletAddress
 --- @type table<WalletAddress, any>
@@ -17,6 +18,7 @@ Tessera = Tessera or {
 
 --- @class ProposalData
 --- @field proposalNumber ProposalNumber
+--- @field msgId MessageId
 --- @field type "Add-Controller"|"Remove-Controller"|"Transfer-Process"|"Eval"
 --- @field yays table<WalletAddress, any> # a lookup table of WalletAddresses that have voted yay. Values irrelevant.
 --- @field nays table<WalletAddress, any> # a lookup table of WalletAddresses that have voted nay. Values irrelevant.
@@ -220,6 +222,7 @@ addEventingHandler(
 		--- @type AddControllerProposalData
 		local newProposal = {
 			proposalNumber = ProposalNumber,
+			msgId = msg.Id,
 			type = "Add-Controller",
 			controller = msg.Tags.Controller,
 			yays = {},
@@ -265,6 +268,7 @@ addEventingHandler(
 		--- @type RemoveControllerProposalData
 		local newProposal = {
 			proposalNumber = ProposalNumber,
+			msgId = msg.Id,
 			type = "Remove-Controller",
 			controller = msg.Tags.Controller,
 			yays = {},
