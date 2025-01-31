@@ -1,4 +1,4 @@
-import { describe, it, before } from 'node:test';
+import { describe, it, before, beforeEach } from 'node:test';
 import { getControllers, getProposals, handle, parseEventsFromResult, rubberStampProposal } from './helpers.mjs';
 import {
   PROCESS_OWNER,
@@ -8,6 +8,7 @@ import assert from 'node:assert';
 
 describe('AOS Handlers:', () => {
   let testMemory;
+  let initialTestMemory;
   before(async () => {
     // Establishes the PROCESS_OWNER as the first controller by way of lazy initialization
     const result = await handle({
@@ -17,8 +18,13 @@ describe('AOS Handlers:', () => {
         ],
       },
     });
-    testMemory = result.Memory;
+    initialTestMemory = result.Memory;
   });
+
+  beforeEach(async () => {
+    testMemory = initialTestMemory;
+  });
+
 
   it('should have the process owner as the only controller on boot', async () => {
     assert.deepStrictEqual(await getControllers(testMemory), [PROCESS_OWNER]);
@@ -35,25 +41,29 @@ describe('AOS Handlers:', () => {
     ];
     const proposalTypes = [
       ...controllerProposalTypes,
+      "Eval"
     ];
 
-    const invalidProposalTest = async (proposalType, options, expectedError) => {
+    const invalidProposalTest = async (options, expectedError) => {
       const result = await handle({ options, mem: testMemory });
-      assert.equal(result.Messages?.length, 1, "Expected one message");
-      const replyMessage = result.Messages[0];
-      const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
-      assert.notEqual(actionTag, undefined, "Expected an action tag");
-      assert.equal(actionTag.value, "Invalid-Propose-Notice");
-      const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
-      assert(errorTag.value.includes(expectedError));
-      assert(replyMessage.Data.includes(expectedError));
+      if (result.Error) {
+        assert(result.Error.includes(expectedError), `Error message '${result.Error}' did not include expected error: ${expectedError}`);
+      } else {
+        assert.equal(result.Messages?.length, 1, "Expected one message");
+        const replyMessage = result.Messages[0];
+        const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
+        assert.notEqual(actionTag, undefined, "Expected an action tag");
+        assert.equal(actionTag.value, "Invalid-Propose-Notice");
+        const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
+        assert(errorTag.value.includes(expectedError), `Error message '${errorTag.value}' did not include expected error: ${expectedError}`);
+        assert(replyMessage.Data.includes(expectedError), `Reply message Data did not include expected error message: ${expectedError}`);
+      }
       return result;
     };
 
     for (const proposalType of proposalTypes) {
       it(`should not allow submitting ${proposalType} proposals from a non-controller`, async () => {
         await invalidProposalTest(
-          proposalType,
           {
             Tags: [
               { name: 'Action', value: "Propose" },
@@ -80,169 +90,170 @@ describe('AOS Handlers:', () => {
       return result.Memory;
     };
 
-    for (const proposalType of controllerProposalTypes) {
-      it(`should require a Controller tag for ${proposalType} proposals`, async () => {
-        await invalidProposalTest(
-          proposalType,
-          {
-            Tags: [
-              { name: 'Action', value: "Propose" },
-              { name: 'Type', value: proposalType },
-            ],
-          },
-          'Controller is required');
-      });
-
-      it(`should successfully create a ${proposalType} proposal`, async () => {
-        const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
-        await validProposalTest(
-          proposalType,
-          {
-            Tags: [
-              { name: 'Action', value: "Propose" },
-              { name: 'Type', value: proposalType },
-              { name: 'Controller', value: controller },
-            ],
-          },
-          `${proposalType}_${controller}`,
-          {
-            proposalNumber: 1,
-            msgId: STUB_MESSAGE_ID,
-            yays: [],
-            nays: [],
-            controller,
-            type: proposalType,
-          },
-          false,
-        );
-      });
-  
-      it(`should allow casting a "yay" vote along with the ${proposalType} proposal`, async () => {
-        const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
-        const resultMemory = await validProposalTest(
-          proposalType,
-          {
-            Tags: [
-              { name: 'Action', value: "Propose" },
-              { name: 'Type', value: proposalType },
-              { name: 'Controller', value: controller },
-              { name: 'Vote', value: 'yay' },
-            ],
-          },
-          `${proposalType}_${controller}`,
-          {
-            proposalNumber: 1,
-            msgId: STUB_MESSAGE_ID,
-            yays: {
-              [PROCESS_OWNER]: true
+    describe("Add/Remove-Controller", () => {
+      for (const proposalType of controllerProposalTypes) {
+        it(`should require a Controller tag for ${proposalType} proposals`, async () => {
+          await invalidProposalTest(
+            {
+              Tags: [
+                { name: 'Action', value: "Propose" },
+                { name: 'Type', value: proposalType },
+              ],
             },
-            nays: [],
-            controller,
-            type: proposalType,
-          }
-        );
-  
-        // The proposal should now be completed
-        assert.deepEqual(await getProposals(resultMemory), {});
-  
-        // The controller should now be added/removed
-        assert.deepEqual(
-          await getControllers(resultMemory),
-          proposalType === "Add-Controller" ? [ PROCESS_OWNER, 'new-controller' ] : [],
-        );
-      });
-  
-      it(`should allow casting a "nay" vote along with the ${proposalType} proposal`, async () => {
-        const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
-        const resultMemory = await validProposalTest(
-          proposalType,
-          {
-            Tags: [
-              { name: 'Action', value: "Propose" },
-              { name: 'Type', value: proposalType },
-              { name: 'Controller', value: controller },
-              { name: 'Vote', value: 'nay' },
-            ],
-          },
-          `${proposalType}_${controller}`,
-          {
-            proposalNumber: 1,
-            msgId: STUB_MESSAGE_ID,
-            yays: [],
-            nays: {
-              [PROCESS_OWNER]: true
-            },
-            controller,
-            type: proposalType,
-          }
-        );
-  
-        // The proposal should now be completed
-        const proposals = await getProposals(resultMemory);
-        assert.deepEqual(proposals, {});
-  
-        // The controller should not have been added/removed
-        assert.deepEqual(await getControllers(resultMemory), [
-          PROCESS_OWNER,
-        ]);
-      });
+            'Controller is required');
+        });
 
-      it(`should disallow casting a vote other than exactly "yay" or "nay" along with the ${proposalType} proposal`, async () => {
-        const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
-        const result = await handle({
-          options: {
-            Tags: [
-              { name: 'Action', value: "Propose" },
-              { name: 'Type', value: proposalType },
-              { name: 'Controller', value: controller },
-              { name: 'Vote', value: ' nay ' },
-            ],
-          },
-          mem: testMemory,
+        it(`should successfully create a ${proposalType} proposal`, async () => {
+          const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
+          await validProposalTest(
+            proposalType,
+            {
+              Tags: [
+                { name: 'Action', value: "Propose" },
+                { name: 'Type', value: proposalType },
+                { name: 'Controller', value: controller },
+              ],
+            },
+            `${proposalType}_${controller}`,
+            {
+              proposalNumber: 1,
+              msgId: STUB_MESSAGE_ID,
+              yays: [],
+              nays: [],
+              controller,
+              type: proposalType,
+            },
+            false,
+          );
         });
-        const replyMessage = result.Messages[0];
-        const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
-        assert.notEqual(actionTag, undefined, "Expected an action tag");
-        assert.equal(actionTag.value, "Invalid-Propose-Notice");
-        const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
-        assert(errorTag.value.includes("Vote, if provided, must be 'yay' or 'nay'"));
-      });
-  
-      it(`should disallow creation of duplicate ${proposalType} proposals`, async () => {
-        const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
-        const result = await handle({
-          options: {
-            Tags: [
-              { name: 'Action', value: "Propose" },
-              { name: 'Type', value: proposalType },
-              { name: 'Controller', value: controller },
-            ],
-          },
-          mem: testMemory,
+    
+        it(`should allow casting a "yay" vote along with the ${proposalType} proposal`, async () => {
+          const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
+          const resultMemory = await validProposalTest(
+            proposalType,
+            {
+              Tags: [
+                { name: 'Action', value: "Propose" },
+                { name: 'Type', value: proposalType },
+                { name: 'Controller', value: controller },
+                { name: 'Vote', value: 'yay' },
+              ],
+            },
+            `${proposalType}_${controller}`,
+            {
+              proposalNumber: 1,
+              msgId: STUB_MESSAGE_ID,
+              yays: {
+                [PROCESS_OWNER]: true
+              },
+              nays: [],
+              controller,
+              type: proposalType,
+            }
+          );
+    
+          // The proposal should now be completed
+          assert.deepEqual(await getProposals(resultMemory), {});
+    
+          // The controller should now be added/removed
+          assert.deepEqual(
+            await getControllers(resultMemory),
+            proposalType === "Add-Controller" ? [ PROCESS_OWNER, 'new-controller' ] : [],
+          );
         });
-        const result2 = await handle({
-          options: {
-            Tags: [
-              { name: 'Action', value: "Propose" },
-              { name: 'Type', value: proposalType },
-              { name: 'Controller', value: controller },
-            ],
-          },
-          mem: result.Memory,
+    
+        it(`should allow casting a "nay" vote along with the ${proposalType} proposal`, async () => {
+          const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
+          const resultMemory = await validProposalTest(
+            proposalType,
+            {
+              Tags: [
+                { name: 'Action', value: "Propose" },
+                { name: 'Type', value: proposalType },
+                { name: 'Controller', value: controller },
+                { name: 'Vote', value: 'nay' },
+              ],
+            },
+            `${proposalType}_${controller}`,
+            {
+              proposalNumber: 1,
+              msgId: STUB_MESSAGE_ID,
+              yays: [],
+              nays: {
+                [PROCESS_OWNER]: true
+              },
+              controller,
+              type: proposalType,
+            }
+          );
+    
+          // The proposal should now be completed
+          const proposals = await getProposals(resultMemory);
+          assert.deepEqual(proposals, {});
+    
+          // The controller should not have been added/removed
+          assert.deepEqual(await getControllers(resultMemory), [
+            PROCESS_OWNER,
+          ]);
         });
-  
-        const replyMessage = result2.Messages[0];
-        const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
-        assert.notEqual(actionTag, undefined, "Expected an action tag");
-        assert.equal(actionTag.value, "Invalid-Propose-Notice");
-        const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
-        assert(errorTag.value.includes('Proposal already exists'));
-      });
-    }
+
+        it(`should disallow casting a vote other than exactly "yay" or "nay" along with the ${proposalType} proposal`, async () => {
+          const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
+          const result = await handle({
+            options: {
+              Tags: [
+                { name: 'Action', value: "Propose" },
+                { name: 'Type', value: proposalType },
+                { name: 'Controller', value: controller },
+                { name: 'Vote', value: ' nay ' },
+              ],
+            },
+            mem: testMemory,
+          });
+          const replyMessage = result.Messages[0];
+          const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
+          assert.notEqual(actionTag, undefined, "Expected an action tag");
+          assert.equal(actionTag.value, "Invalid-Propose-Notice");
+          const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
+          assert(errorTag.value.includes("Vote, if provided, must be 'yay' or 'nay'"));
+        });
+    
+        it(`should disallow creation of duplicate ${proposalType} proposals`, async () => {
+          const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
+          const result = await handle({
+            options: {
+              Tags: [
+                { name: 'Action', value: "Propose" },
+                { name: 'Type', value: proposalType },
+                { name: 'Controller', value: controller },
+              ],
+            },
+            mem: testMemory,
+          });
+          const result2 = await handle({
+            options: {
+              Tags: [
+                { name: 'Action', value: "Propose" },
+                { name: 'Type', value: proposalType },
+                { name: 'Controller', value: controller },
+              ],
+            },
+            mem: result.Memory,
+          });
+    
+          const replyMessage = result2.Messages[0];
+          const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
+          assert.notEqual(actionTag, undefined, "Expected an action tag");
+          assert.equal(actionTag.value, "Invalid-Propose-Notice");
+          const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
+          assert(errorTag.value.includes('Proposal already exists'));
+        });
+      }
+    });
 
     describe("Add-Controller", () => {
       it('should not allow proposing an existing controller', async () => {
-        await invalidProposalTest("Add-Controller", {
+        await invalidProposalTest({
           Tags: [
             { name: 'Action', value: 'Propose' },
             { name: 'Type', value: 'Add-Controller' },
@@ -251,6 +262,7 @@ describe('AOS Handlers:', () => {
           }, 'Controller already exists');
       });
     
+      // TODO: Refactor "Vote" block to support both Add-Controller and Remove-Controller proposals
       describe("Vote", () => {
         let testMemory;
         before(async () => {
@@ -629,7 +641,7 @@ describe('AOS Handlers:', () => {
   
     describe("Remove-Controller", () => {
       it('should not allow proposing removal of an unknown controller', async () => {
-        await invalidProposalTest("Remove-Controller", {
+        await invalidProposalTest({
           Tags: [
             { name: 'Action', value: 'Propose' },
             { name: 'Type', value: 'Remove-Controller' },
@@ -639,6 +651,66 @@ describe('AOS Handlers:', () => {
       });
     });
 
-    // TODO: Refactor "Vote" block to support both Add-Controller and Remove-Controller proposals
+    describe("Eval", () => {
+      it('should require a Process-Id', async () => {
+        await invalidProposalTest({
+          Tags: [
+            { name: 'Action', value: 'Propose' },
+            { name: 'Type', value: 'Eval' },
+          ],
+        }, 'Process-Id is required');
+      });
+
+      it('should require a Process-Id with non-zero length', async () => {
+        await invalidProposalTest({
+          Tags: [
+            { name: 'Action', value: 'Propose' },
+            { name: 'Type', value: 'Eval' },
+            { name: 'Process-Id', value: '' },
+          ],
+        }, 'Value for Process-Id cannot be empty');
+      });
+
+      it('should require a non-whitespace Process-Id', async () => {
+        await invalidProposalTest({
+          Tags: [
+            { name: 'Action', value: 'Propose' },
+            { name: 'Type', value: 'Eval' },
+            { name: 'Process-Id', value: ' ' },
+          ],
+        }, 'Value for Process-Id cannot be only whitespace');
+      });
+
+      it('should require Data with non-zero length', async () => {
+        await invalidProposalTest({
+          Tags: [
+            { name: 'Action', value: 'Propose' },
+            { name: 'Type', value: 'Eval' },
+            { name: 'Process-Id', value: 'target-process-id' },
+          ],
+        }, 'Eval string is expected in message Data');
+      });
+
+      it('should successfully create and execute an Eval proposal', async () => {
+        const result = await handle({
+          options: {
+            Tags: [
+              { name: 'Action', value: 'Propose' },
+              { name: 'Type', value: 'Eval' },
+              { name: 'Process-Id', value: 'target-process-id' },
+              { name: 'Vote', value: 'yay' },
+            ],
+            Data: 'print("Hello, World!")',
+          },
+          mem: testMemory,
+        });
+        assert.equal(result.Messages?.length, 3, "Expected 3 outgoing messages");
+        const messageActions = result.Messages.map(message => message.Tags.find(tag => tag.name === 'Action')?.value).sort();
+        assert.deepEqual(messageActions, ['Eval', 'Proposal-Accepted-Notice', 'Propose-Eval-Notice']);
+        const evalMessage = result.Messages.find(message => message.Tags.find(tag => tag.name === 'Action')?.value === 'Eval');
+        assert.deepEqual(evalMessage.Data, 'print("Hello, World!")');
+        // TODO: More thorough testing here
+      });
+    });
   });
 });

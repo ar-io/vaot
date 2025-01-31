@@ -23,18 +23,9 @@ Tessera = Tessera or {
 --- @field yays table<WalletAddress, any> # a lookup table of WalletAddresses that have voted yay. Values irrelevant.
 --- @field nays table<WalletAddress, any> # a lookup table of WalletAddresses that have voted nay. Values irrelevant.
 
---- @class AddControllerProposalData : ProposalData
+--- @class ControllerProposalData : ProposalData
 --- @field controller WalletAddress
---- @field type "Add-Controller"
-
---- @class RemoveControllerProposalData : ProposalData
---- @field controller WalletAddress
---- @field type "Remove-Controller"
-
---- @class TransferProcessProposalData : ProposalData
---- @field processId ProcessId
---- @field recipient WalletAddress
---- @field type "Transfer-Process"
+--- @field type "Add-Controller"|"Remove-Controller"
 
 --- @class EvalProposalData : ProposalData
 --- @field processId ProcessId
@@ -45,10 +36,10 @@ local SupportedProposalTypes = {
 	["Add-Controller"] = true,
 	["Remove-Controller"] = true,
 	["Transfer-Process"] = true,
-	-- ["Eval"] = true, -- TODO
+	["Eval"] = true,
 }
 
---- @alias ProposalDataType AddControllerProposalData|RemoveControllerProposalData|TransferProcessProposalData|EvalProposalData
+--- @alias ProposalDataType ControllerProposalData|EvalProposalData
 
 --- @type ProposalNumber
 ProposalNumber = ProposalNumber or 0
@@ -193,7 +184,15 @@ function handleMaybeVoteQuorum(proposalName, msg)
 			Tessera[proposal.controller] = true
 		elseif proposal.type == "Remove-Controller" then
 			Tessera[proposal.controller] = nil
-			-- TODO: Implementations for transfer process and eval
+		elseif proposal.type == "Eval" then
+			Send(msg, {
+				Target = proposal.processId,
+				Action = "Eval",
+				["Proposal-Number"] = proposal.proposalNumber,
+				Data = proposal.evalStr,
+			})
+		else
+			error("Unknown proposal type: " .. proposal.type)
 		end
 
 		Proposals[proposalName] = nil
@@ -206,6 +205,8 @@ function handleMaybeVoteQuorum(proposalName, msg)
 		-- Proposal has reached quorum and failed
 		Proposals[proposalName] = nil
 		notifyProposalComplete(false)
+	else
+		-- No quorum yet
 	end
 end
 
@@ -222,7 +223,7 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 	end
 
 	local proposalName
-	--- @type AddControllerProposalData|RemoveControllerProposalData|nil
+	--- @type ControllerProposalData|EvalProposalData|nil
 	local newProposal
 	if msg.Tags.Type == "Add-Controller" or msg.Tags.Type == "Remove-Controller" then
 		local controller = msg.Tags.Controller
@@ -236,11 +237,32 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 		assert(not Proposals[proposalName], "Proposal already exists")
 
 		ProposalNumber = ProposalNumber + 1
+
+		--- @type ControllerProposalData
 		newProposal = {
 			proposalNumber = ProposalNumber,
 			msgId = msg.Id,
 			type = msg.Tags.Type,
 			controller = msg.Tags.Controller,
+			yays = {},
+			nays = {},
+		}
+	elseif msg.Tags.Type == "Eval" then
+		local processId = msg.Tags["Process-Id"]
+		assert(processId and type(processId) == "string", "Process-Id is required")
+		local evalStr = msg.Data
+		assert(evalStr and type(evalStr) == "string" and #evalStr > 0, "Eval string is expected in message Data")
+		proposalName = msg.Tags.Type .. "_" .. processId .. "_" .. msg.Id
+		assert(not Proposals[proposalName], "Proposal already exists")
+
+		ProposalNumber = ProposalNumber + 1
+		--- @type EvalProposalData
+		newProposal = {
+			proposalNumber = ProposalNumber,
+			msgId = msg.Id,
+			type = msg.Tags.Type,
+			processId = processId,
+			evalStr = evalStr,
 			yays = {},
 			nays = {},
 		}
