@@ -112,7 +112,7 @@ describe('AOS Handlers:', () => {
         );
       });
   
-      it(`should allow casting a "Yay" vote along with the ${proposalType} proposal`, async () => {
+      it(`should allow casting a "yay" vote along with the ${proposalType} proposal`, async () => {
         const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
         const resultMemory = await validProposalTest(
           proposalType,
@@ -120,7 +120,7 @@ describe('AOS Handlers:', () => {
             Tags: [
               { name: 'Action', value: `Propose-${proposalType}` },
               { name: 'Controller', value: controller },
-              { name: 'Vote', value: 'Yay' },
+              { name: 'Vote', value: 'yay' },
             ],
           },
           `${proposalType}_${controller}`,
@@ -145,7 +145,7 @@ describe('AOS Handlers:', () => {
         );
       });
   
-      it(`should allow casting a "Nay" vote along with the ${proposalType} proposal`, async () => {
+      it(`should allow casting a "nay" vote along with the ${proposalType} proposal`, async () => {
         const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
         const resultMemory = await validProposalTest(
           proposalType,
@@ -153,7 +153,7 @@ describe('AOS Handlers:', () => {
             Tags: [
               { name: 'Action', value: `Propose-${proposalType}` },
               { name: 'Controller', value: controller },
-              { name: 'Vote', value: 'Nay' },
+              { name: 'Vote', value: 'nay' },
             ],
           },
           `${proposalType}_${controller}`,
@@ -176,6 +176,26 @@ describe('AOS Handlers:', () => {
         assert.deepEqual(await getControllers(resultMemory), [
           PROCESS_OWNER,
         ]);
+      });
+
+      it(`should disallow casting a vote other than exactly "yay" or "nay" along with the ${proposalType} proposal`, async () => {
+        const controller = proposalType === "Add-Controller" ? 'new-controller' : PROCESS_OWNER;
+        const result = await handle({
+          options: {
+            Tags: [
+              { name: 'Action', value: `Propose-${proposalType}` },
+              { name: 'Controller', value: controller },
+              { name: 'Vote', value: ' nay ' },
+            ],
+          },
+          mem: testMemory,
+        });
+        const replyMessage = result.Messages[0];
+        const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
+        assert.notEqual(actionTag, undefined, "Expected an action tag");
+        assert.equal(actionTag.value, `Invalid-Propose-${proposalType}-Notice`);
+        const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
+        assert(errorTag.value.includes("Vote, if provided, must be 'yay' or 'nay'"));
       });
   
       it(`should disallow creation of duplicate ${proposalType} proposals`, async () => {
@@ -238,7 +258,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '1' },
-                { name: 'Vote', value: 'Yay' },
+                { name: 'Vote', value: 'yay' },
               ],
               From: "non-controller",
               Owner: "non-controller",
@@ -261,7 +281,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '2' },
-                { name: 'Vote', value: 'Yay' },
+                { name: 'Vote', value: 'yay' },
               ],
             },
             mem: testMemory,
@@ -275,6 +295,26 @@ describe('AOS Handlers:', () => {
           assert(errorTag.value.includes('Proposal does not exist'));
           assert(replyMessage.Data.includes('Proposal does not exist'));
         });
+
+        it("should not allow voting anything other than 'yay' or 'nay' on a proposal", async () => {
+          const result = await handle({
+            options: {
+              Tags: [
+                { name: 'Action', value: 'Vote' },
+                { name: 'Proposal-Number', value: '1' },
+                { name: 'Vote', value: ' yay ' },
+              ],
+            },
+            mem: testMemory,
+          });
+    
+          const replyMessage = result.Messages[0];
+          const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
+          assert.notEqual(actionTag, undefined, "Expected an action tag");
+          assert.equal(actionTag.value, 'Invalid-Vote-Notice');
+          const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
+          assert(errorTag.value.includes("A Vote of 'yay' or 'nay' is required"), `Error message '${errorTag.value}' was unexpected.`);
+        });
     
         it("should allow voting yay on a proposal", async () => {
           const result = await handle({
@@ -282,7 +322,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '1' },
-                { name: 'Vote', value: 'Yay' },
+                { name: 'Vote', value: 'yay' },
               ],
             },
             mem: testMemory,
@@ -313,7 +353,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '1' },
-                { name: 'Vote', value: 'Nay' },
+                { name: 'Vote', value: 'nay' },
               ],
             },
             mem: testMemory,
@@ -345,7 +385,7 @@ describe('AOS Handlers:', () => {
                 Tags: [
                   { name: 'Action', value: 'Vote' },
                   { name: 'Proposal-Number', value: '1' },
-                  { name: 'Vote', value: 'Yay' }, // this should cause immediate passing of the proposal
+                  { name: 'Vote', value: 'yay' }, // this should cause immediate passing of the proposal
                 ],
               },
               mem: testMemory,
@@ -371,7 +411,7 @@ describe('AOS Handlers:', () => {
                 Tags: [
                   { name: 'Action', value: 'Vote' },
                   { name: 'Proposal-Number', value: '2' },
-                  { name: 'Vote', value: 'Yay' },
+                  { name: 'Vote', value: 'yay' },
                 ],
                 From: "new-controller",
                 Owner: "new-controller",
@@ -397,7 +437,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '2' },
-                { name: 'Vote', value: 'Yay' },
+                { name: 'Vote', value: 'yay' },
               ],
               From: "new-controller",
               Owner: "new-controller",
@@ -409,7 +449,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '2' },
-                { name: 'Vote', value: 'Yay' },
+                { name: 'Vote', value: 'yay' },
               ],
             },
             mem: result.Memory,
@@ -440,7 +480,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '2' },
-                { name: 'Vote', value: 'Nay' },
+                { name: 'Vote', value: 'nay' },
               ],
               From: "new-controller",
               Owner: "new-controller",
@@ -452,7 +492,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '2' },
-                { name: 'Vote', value: 'Nay' },
+                { name: 'Vote', value: 'nay' },
               ],
             },
             mem: result.Memory,
@@ -483,7 +523,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '2' },
-                { name: 'Vote', value: 'Nay' },
+                { name: 'Vote', value: 'nay' },
               ],
               From: "new-controller",
               Owner: "new-controller",
@@ -495,7 +535,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '2' },
-                { name: 'Vote', value: 'Yay' },
+                { name: 'Vote', value: 'yay' },
               ],
             },
             mem: result.Memory,
@@ -539,7 +579,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '2' },
-                { name: 'Vote', value: 'Yay' },
+                { name: 'Vote', value: 'yay' },
               ],
               From: "new-controller3",
               Owner: "new-controller3",
@@ -552,7 +592,7 @@ describe('AOS Handlers:', () => {
               Tags: [
                 { name: 'Action', value: 'Vote' },
                 { name: 'Proposal-Number', value: '2' },
-                { name: 'Vote', value: 'Yay' },
+                { name: 'Vote', value: 'yay' },
               ],
             },
             mem: firstVoteresult.Memory,

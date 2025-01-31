@@ -257,7 +257,6 @@ addEventingHandler(
 		assert(not Proposals[proposalName], "Proposal already exists")
 		local vote = msg.Tags.Vote
 		if vote ~= nil then
-			vote = type(vote) == "string" and string.lower(vote) or "error"
 			assert(vote == "yay" or vote == "nay", "Vote, if provided, must be 'yay' or 'nay'")
 		end
 
@@ -296,19 +295,16 @@ addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), func
 	assert(Tessera[msg.From], "Sender is not a registered Controller!")
 	assert(msg.Tags["Proposal-Number"], "Proposal-Number is required")
 	local vote = msg.Tags.Vote
-	if vote ~= nil then
-		vote = type(vote) == "string" and string.lower(vote) or "error"
-	end
 	assert(vote and vote == "yay" or vote == "nay", "A Vote of 'yay' or 'nay' is required")
 	local proposalName, proposal = utils.findInTable(Proposals, function(_, prop)
 		return prop.proposalNumber == msg.Tags["Proposal-Number"]
 	end)
 	assert(proposal, "Proposal does not exist")
 
-	if string.lower(msg.Tags.Vote) == "yay" then
+	if vote == "yay" then
 		proposal.yays[msg.From] = true
 		proposal.nays[msg.From] = nil
-	elseif msg.Tags.Vote == "Nay" then
+	elseif vote == "nay" then
 		proposal.nays[msg.From] = true
 		proposal.yays[msg.From] = nil
 	end
