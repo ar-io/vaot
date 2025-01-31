@@ -28,7 +28,7 @@ describe('AOS Handlers:', () => {
     assert.deepStrictEqual(await getProposals(testMemory), {});
   });
 
-  describe("Proposal Handlers", () => {
+  describe("'Propose' Handler", () => {
     const controllerProposalTypes = [
       "Add-Controller",
       "Remove-Controller",
@@ -43,7 +43,7 @@ describe('AOS Handlers:', () => {
       const replyMessage = result.Messages[0];
       const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
       assert.notEqual(actionTag, undefined, "Expected an action tag");
-      assert.equal(actionTag.value, `Invalid-Propose-${proposalType}-Notice`);
+      assert.equal(actionTag.value, "Invalid-Propose-Notice");
       const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
       assert(errorTag.value.includes(expectedError));
       assert(replyMessage.Data.includes(expectedError));
@@ -56,7 +56,8 @@ describe('AOS Handlers:', () => {
           proposalType,
           {
             Tags: [
-              { name: 'Action', value: `Propose-${proposalType}` },
+              { name: 'Action', value: "Propose" },
+              { name: 'Type', value: proposalType },
               { name: 'Controller', value: 'non-controller' },
             ],
             From: "non-controller",
@@ -85,7 +86,8 @@ describe('AOS Handlers:', () => {
           proposalType,
           {
             Tags: [
-              { name: 'Action', value: `Propose-${proposalType}` },
+              { name: 'Action', value: "Propose" },
+              { name: 'Type', value: proposalType },
             ],
           },
           'Controller is required');
@@ -97,7 +99,8 @@ describe('AOS Handlers:', () => {
           proposalType,
           {
             Tags: [
-              { name: 'Action', value: `Propose-${proposalType}` },
+              { name: 'Action', value: "Propose" },
+              { name: 'Type', value: proposalType },
               { name: 'Controller', value: controller },
             ],
           },
@@ -120,7 +123,8 @@ describe('AOS Handlers:', () => {
           proposalType,
           {
             Tags: [
-              { name: 'Action', value: `Propose-${proposalType}` },
+              { name: 'Action', value: "Propose" },
+              { name: 'Type', value: proposalType },
               { name: 'Controller', value: controller },
               { name: 'Vote', value: 'yay' },
             ],
@@ -154,7 +158,8 @@ describe('AOS Handlers:', () => {
           proposalType,
           {
             Tags: [
-              { name: 'Action', value: `Propose-${proposalType}` },
+              { name: 'Action', value: "Propose" },
+              { name: 'Type', value: proposalType },
               { name: 'Controller', value: controller },
               { name: 'Vote', value: 'nay' },
             ],
@@ -187,7 +192,8 @@ describe('AOS Handlers:', () => {
         const result = await handle({
           options: {
             Tags: [
-              { name: 'Action', value: `Propose-${proposalType}` },
+              { name: 'Action', value: "Propose" },
+              { name: 'Type', value: proposalType },
               { name: 'Controller', value: controller },
               { name: 'Vote', value: ' nay ' },
             ],
@@ -197,7 +203,7 @@ describe('AOS Handlers:', () => {
         const replyMessage = result.Messages[0];
         const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
         assert.notEqual(actionTag, undefined, "Expected an action tag");
-        assert.equal(actionTag.value, `Invalid-Propose-${proposalType}-Notice`);
+        assert.equal(actionTag.value, "Invalid-Propose-Notice");
         const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
         assert(errorTag.value.includes("Vote, if provided, must be 'yay' or 'nay'"));
       });
@@ -207,7 +213,8 @@ describe('AOS Handlers:', () => {
         const result = await handle({
           options: {
             Tags: [
-              { name: 'Action', value: `Propose-${proposalType}` },
+              { name: 'Action', value: "Propose" },
+              { name: 'Type', value: proposalType },
               { name: 'Controller', value: controller },
             ],
           },
@@ -216,7 +223,8 @@ describe('AOS Handlers:', () => {
         const result2 = await handle({
           options: {
             Tags: [
-              { name: 'Action', value: `Propose-${proposalType}` },
+              { name: 'Action', value: "Propose" },
+              { name: 'Type', value: proposalType },
               { name: 'Controller', value: controller },
             ],
           },
@@ -226,17 +234,18 @@ describe('AOS Handlers:', () => {
         const replyMessage = result2.Messages[0];
         const actionTag = replyMessage.Tags.find(tag => tag.name === 'Action');
         assert.notEqual(actionTag, undefined, "Expected an action tag");
-        assert.equal(actionTag.value, `Invalid-Propose-${proposalType}-Notice`);
+        assert.equal(actionTag.value, "Invalid-Propose-Notice");
         const errorTag = replyMessage.Tags.find(tag => tag.name === 'Error');
         assert(errorTag.value.includes('Proposal already exists'));
       });
     }
 
-    describe("Propose-Add-Controller", () => {
+    describe("Add-Controller", () => {
       it('should not allow proposing an existing controller', async () => {
         await invalidProposalTest("Add-Controller", {
           Tags: [
-            { name: 'Action', value: 'Propose-Add-Controller' },
+            { name: 'Action', value: 'Propose' },
+            { name: 'Type', value: 'Add-Controller' },
             { name: 'Controller', value: PROCESS_OWNER },
           ],
           }, 'Controller already exists');
@@ -248,7 +257,8 @@ describe('AOS Handlers:', () => {
           const result = await handle({
             options: {
               Tags: [
-                { name: 'Action', value: 'Propose-Add-Controller' },
+                { name: 'Action', value: 'Propose' },
+                { name: 'Type', value: 'Add-Controller' },
                 { name: 'Controller', value: 'new-controller' },
               ],
             },
@@ -401,7 +411,8 @@ describe('AOS Handlers:', () => {
             const result2 = await handle({
               options: {
                 Tags: [
-                  { name: 'Action', value: 'Propose-Add-Controller' },
+                  { name: 'Action', value: 'Propose' },
+                  { name: 'Type', value: 'Add-Controller' },
                   { name: 'Controller', value: 'new-controller2' },
                   // Don't vote yay to allow for both yay, nay, and quorum outcome tests
                 ],
@@ -575,7 +586,8 @@ describe('AOS Handlers:', () => {
           // After this, PROCESS_OWNER, 'new-controller', and 'new-controller3' should be controllers
           const { memory: rubberStampMemory } = await rubberStampProposal({
             proposalTags: [
-              { name: 'Action', value: 'Propose-Add-Controller' },
+              { name: 'Action', value: 'Propose' },
+              { name: 'Type', value: 'Add-Controller' },
               { name: 'Controller', value: 'new-controller3' },
             ],
             memory: testMemory,
@@ -615,11 +627,12 @@ describe('AOS Handlers:', () => {
       });
     });
   
-    describe("Propose-Remove-Controller", () => {
+    describe("Remove-Controller", () => {
       it('should not allow proposing removal of an unknown controller', async () => {
         await invalidProposalTest("Remove-Controller", {
           Tags: [
-            { name: 'Action', value: 'Propose-Remove-Controller' },
+            { name: 'Action', value: 'Propose' },
+            { name: 'Type', value: 'Remove-Controller' },
             { name: 'Controller', value: 'new-controller' },
           ],
           }, 'Controller is not recognized');

@@ -41,6 +41,13 @@ Tessera = Tessera or {
 --- @field evalStr string
 --- @field type "Eval"
 
+local SupportedProposalTypes = {
+	["Add-Controller"] = true,
+	["Remove-Controller"] = true,
+	["Transfer-Process"] = true,
+	-- ["Eval"] = true, -- TODO
+}
+
 --- @alias ProposalDataType AddControllerProposalData|RemoveControllerProposalData|TransferProcessProposalData|EvalProposalData
 
 --- @type ProposalNumber
@@ -202,98 +209,64 @@ function handleMaybeVoteQuorum(proposalName, msg)
 	end
 end
 
-addEventingHandler(
-	"proposeAddController",
-	Handlers.utils.hasMatchingTag("Action", "Propose-Add-Controller"),
-	function(msg)
-		assert(Tessera[msg.From], "Sender is not a registered Controller!")
-		assert(msg.Tags.Controller, "Controller is required")
-		assert(not Tessera[msg.Tags.Controller], "Controller already exists")
-		local proposalName = "Add-Controller_" .. msg.Tags.Controller
+addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose"), function(msg)
+	assert(Tessera[msg.From], "Sender is not a registered Controller!")
+	assert(
+		SupportedProposalTypes[msg.Tags.Type or "unknown"],
+		"Type is required and must be one of: 'Add-Controller', 'Remove-Controller', or 'Eval'"
+	)
+	local vote = msg.Tags.Vote
+	if vote ~= nil then
+		vote = type(vote) == "string" and string.lower(vote) or "error"
+		assert(vote == "yay" or vote == "nay", "Vote, if provided, must be 'yay' or 'nay'")
+	end
+
+	local proposalName
+	--- @type AddControllerProposalData|RemoveControllerProposalData|nil
+	local newProposal
+	if msg.Tags.Type == "Add-Controller" or msg.Tags.Type == "Remove-Controller" then
+		local controller = msg.Tags.Controller
+		assert(controller and type(controller) == "string" and #controller > 0, "Controller is required")
+		local shouldExist = msg.Tags.Type == "Remove-Controller"
+		assert(
+			(Tessera[msg.Tags.Controller] ~= nil) == shouldExist,
+			shouldExist and "Controller is not recognized" or "Controller already exists"
+		)
+		proposalName = msg.Tags.Type .. "_" .. msg.Tags.Controller
 		assert(not Proposals[proposalName], "Proposal already exists")
-		local vote = msg.Tags.Vote
-		if vote ~= nil then
-			vote = type(vote) == "string" and string.lower(vote) or "error"
-			assert(vote == "yay" or vote == "nay", "Vote, if provided, must be 'yay' or 'nay'")
-		end
 
 		ProposalNumber = ProposalNumber + 1
-
-		--- @type AddControllerProposalData
-		local newProposal = {
+		newProposal = {
 			proposalNumber = ProposalNumber,
 			msgId = msg.Id,
-			type = "Add-Controller",
+			type = msg.Tags.Type,
 			controller = msg.Tags.Controller,
 			yays = {},
 			nays = {},
 		}
-		if vote == "yay" then
-			newProposal.yays[msg.From] = true
-		elseif vote == "nay" then
-			newProposal.nays[msg.From] = true
-		end
-		Proposals[proposalName] = newProposal
-
-		local returnData = utils.deepCopy(newProposal)
-		--- @diagnostic disable-next-line: inject-field
-		returnData.proposalName = proposalName
-
-		Send(msg, {
-			Target = msg.From,
-			Action = "Propose-Add-Controller-Notice",
-			Data = returnData,
-		})
-
-		handleMaybeVoteQuorum(proposalName, msg)
 	end
-)
+	assert(proposalName, "proposalName not initialized")
+	assert(newProposal, "newProposal not initialized")
 
-addEventingHandler(
-	"proposeRemoveController",
-	Handlers.utils.hasMatchingTag("Action", "Propose-Remove-Controller"),
-	function(msg)
-		assert(Tessera[msg.From], "Sender is not a registered Controller!")
-		assert(msg.Tags.Controller, "Controller is required")
-		assert(Tessera[msg.Tags.Controller], "Controller is not recognized")
-		local proposalName = "Remove-Controller_" .. msg.Tags.Controller
-		assert(not Proposals[proposalName], "Proposal already exists")
-		local vote = msg.Tags.Vote
-		if vote ~= nil then
-			assert(vote == "yay" or vote == "nay", "Vote, if provided, must be 'yay' or 'nay'")
-		end
-
-		ProposalNumber = ProposalNumber + 1
-
-		--- @type RemoveControllerProposalData
-		local newProposal = {
-			proposalNumber = ProposalNumber,
-			msgId = msg.Id,
-			type = "Remove-Controller",
-			controller = msg.Tags.Controller,
-			yays = {},
-			nays = {},
-		}
-		if vote == "yay" then
-			newProposal.yays[msg.From] = true
-		elseif vote == "nay" then
-			newProposal.nays[msg.From] = true
-		end
-		Proposals[proposalName] = newProposal
-
-		local returnData = utils.deepCopy(newProposal)
-		--- @diagnostic disable-next-line: inject-field
-		returnData.proposalName = proposalName
-
-		Send(msg, {
-			Target = msg.From,
-			Action = "Propose-Remove-Controller-Notice",
-			Data = returnData,
-		})
-
-		handleMaybeVoteQuorum(proposalName, msg)
+	if vote == "yay" then
+		newProposal.yays[msg.From] = true
+	elseif vote == "nay" then
+		newProposal.nays[msg.From] = true
 	end
-)
+	Proposals[proposalName] = newProposal
+
+	local returnData = utils.deepCopy(newProposal)
+	--- @diagnostic disable-next-line: inject-field
+	returnData.proposalName = proposalName
+
+	Send(msg, {
+		Target = msg.From,
+		Action = "Propose-" .. msg.Tags.Type .. "-Notice",
+		Data = returnData,
+	})
+
+	handleMaybeVoteQuorum(proposalName, msg)
+end)
 
 addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), function(msg)
 	assert(Tessera[msg.From], "Sender is not a registered Controller!")
