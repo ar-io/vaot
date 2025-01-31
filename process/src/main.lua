@@ -18,8 +18,8 @@ Tessera = Tessera or {
 --- @class ProposalData
 --- @field proposalNumber ProposalNumber
 --- @field type "Add-Controller"|"Remove-Controller"|"Transfer-Process"|"Eval"
---- @field yays table<WalletAddress, any>
---- @field nays table<WalletAddress, any>
+--- @field yays table<WalletAddress, any> # a lookup table of WalletAddresses that have voted yay. Values irrelevant.
+--- @field nays table<WalletAddress, any> # a lookup table of WalletAddresses that have voted nay. Values irrelevant.
 
 --- @class AddControllerProposalData : ProposalData
 --- @field controller WalletAddress
