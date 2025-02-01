@@ -67,7 +67,7 @@ describe('AOS Handlers:', () => {
           {
             Tags: [
               { name: 'Action', value: "Propose" },
-              { name: 'Type', value: proposalType },
+              { name: 'Proposal-Type', value: proposalType },
               { name: 'Controller', value: 'non-controller' },
             ],
             From: "non-controller",
@@ -97,7 +97,7 @@ describe('AOS Handlers:', () => {
             {
               Tags: [
                 { name: 'Action', value: "Propose" },
-                { name: 'Type', value: proposalType },
+                { name: 'Proposal-Type', value: proposalType },
               ],
             },
             'Controller is required');
@@ -110,7 +110,7 @@ describe('AOS Handlers:', () => {
             {
               Tags: [
                 { name: 'Action', value: "Propose" },
-                { name: 'Type', value: proposalType },
+                { name: 'Proposal-Type', value: proposalType },
                 { name: 'Controller', value: controller },
               ],
             },
@@ -134,7 +134,7 @@ describe('AOS Handlers:', () => {
             {
               Tags: [
                 { name: 'Action', value: "Propose" },
-                { name: 'Type', value: proposalType },
+                { name: 'Proposal-Type', value: proposalType },
                 { name: 'Controller', value: controller },
                 { name: 'Vote', value: 'yay' },
               ],
@@ -169,7 +169,7 @@ describe('AOS Handlers:', () => {
             {
               Tags: [
                 { name: 'Action', value: "Propose" },
-                { name: 'Type', value: proposalType },
+                { name: 'Proposal-Type', value: proposalType },
                 { name: 'Controller', value: controller },
                 { name: 'Vote', value: 'nay' },
               ],
@@ -203,7 +203,7 @@ describe('AOS Handlers:', () => {
             options: {
               Tags: [
                 { name: 'Action', value: "Propose" },
-                { name: 'Type', value: proposalType },
+                { name: 'Proposal-Type', value: proposalType },
                 { name: 'Controller', value: controller },
                 { name: 'Vote', value: ' nay ' },
               ],
@@ -224,7 +224,7 @@ describe('AOS Handlers:', () => {
             options: {
               Tags: [
                 { name: 'Action', value: "Propose" },
-                { name: 'Type', value: proposalType },
+                { name: 'Proposal-Type', value: proposalType },
                 { name: 'Controller', value: controller },
               ],
             },
@@ -234,7 +234,7 @@ describe('AOS Handlers:', () => {
             options: {
               Tags: [
                 { name: 'Action', value: "Propose" },
-                { name: 'Type', value: proposalType },
+                { name: 'Proposal-Type', value: proposalType },
                 { name: 'Controller', value: controller },
               ],
             },
@@ -256,7 +256,7 @@ describe('AOS Handlers:', () => {
         await invalidProposalTest({
           Tags: [
             { name: 'Action', value: 'Propose' },
-            { name: 'Type', value: 'Add-Controller' },
+            { name: 'Proposal-Type', value: 'Add-Controller' },
             { name: 'Controller', value: PROCESS_OWNER },
           ],
           }, 'Controller already exists');
@@ -270,7 +270,7 @@ describe('AOS Handlers:', () => {
             options: {
               Tags: [
                 { name: 'Action', value: 'Propose' },
-                { name: 'Type', value: 'Add-Controller' },
+                { name: 'Proposal-Type', value: 'Add-Controller' },
                 { name: 'Controller', value: 'new-controller' },
               ],
             },
@@ -424,7 +424,7 @@ describe('AOS Handlers:', () => {
               options: {
                 Tags: [
                   { name: 'Action', value: 'Propose' },
-                  { name: 'Type', value: 'Add-Controller' },
+                  { name: 'Proposal-Type', value: 'Add-Controller' },
                   { name: 'Controller', value: 'new-controller2' },
                   // Don't vote yay to allow for both yay, nay, and quorum outcome tests
                 ],
@@ -622,7 +622,7 @@ describe('AOS Handlers:', () => {
           const { memory: rubberStampMemory } = await rubberStampProposal({
             proposalTags: [
               { name: 'Action', value: 'Propose' },
-              { name: 'Type', value: 'Add-Controller' },
+              { name: 'Proposal-Type', value: 'Add-Controller' },
               { name: 'Controller', value: 'new-controller3' },
             ],
             memory: testMemory,
@@ -667,7 +667,7 @@ describe('AOS Handlers:', () => {
         await invalidProposalTest({
           Tags: [
             { name: 'Action', value: 'Propose' },
-            { name: 'Type', value: 'Remove-Controller' },
+            { name: 'Proposal-Type', value: 'Remove-Controller' },
             { name: 'Controller', value: 'new-controller' },
           ],
           }, 'Controller is not recognized');
@@ -679,7 +679,7 @@ describe('AOS Handlers:', () => {
         await invalidProposalTest({
           Tags: [
             { name: 'Action', value: 'Propose' },
-            { name: 'Type', value: 'Eval' },
+            { name: 'Proposal-Type', value: 'Eval' },
           ],
         }, 'Process-Id is required');
       });
@@ -688,7 +688,7 @@ describe('AOS Handlers:', () => {
         await invalidProposalTest({
           Tags: [
             { name: 'Action', value: 'Propose' },
-            { name: 'Type', value: 'Eval' },
+            { name: 'Proposal-Type', value: 'Eval' },
             { name: 'Process-Id', value: '' },
           ],
         }, 'Value for Process-Id cannot be empty');
@@ -698,7 +698,7 @@ describe('AOS Handlers:', () => {
         await invalidProposalTest({
           Tags: [
             { name: 'Action', value: 'Propose' },
-            { name: 'Type', value: 'Eval' },
+            { name: 'Proposal-Type', value: 'Eval' },
             { name: 'Process-Id', value: ' ' },
           ],
         }, 'Value for Process-Id cannot be only whitespace');
@@ -708,7 +708,7 @@ describe('AOS Handlers:', () => {
         await invalidProposalTest({
           Tags: [
             { name: 'Action', value: 'Propose' },
-            { name: 'Type', value: 'Eval' },
+            { name: 'Proposal-Type', value: 'Eval' },
             { name: 'Process-Id', value: 'target-process-id' },
           ],
         }, 'Eval string is expected in message Data');
@@ -719,7 +719,7 @@ describe('AOS Handlers:', () => {
           options: {
             Tags: [
               { name: 'Action', value: 'Propose' },
-              { name: 'Type', value: 'Eval' },
+              { name: 'Proposal-Type', value: 'Eval' },
               { name: 'Process-Id', value: 'target-process-id' },
               { name: 'Vote', value: 'yay' },
             ],
