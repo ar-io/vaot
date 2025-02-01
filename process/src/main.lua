@@ -213,8 +213,8 @@ end
 addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose"), function(msg)
 	assert(Tessera[msg.From], "Sender is not a registered Controller!")
 	assert(
-		SupportedProposalTypes[msg.Tags.Type or "unknown"],
-		"Type is required and must be one of: 'Add-Controller', 'Remove-Controller', or 'Eval'"
+		SupportedProposalTypes[msg.Tags["Proposal-Type"] or "unknown"],
+		"Proposal-Type is required and must be one of: 'Add-Controller', 'Remove-Controller', or 'Eval'"
 	)
 	local vote = msg.Tags.Vote
 	if vote ~= nil then
@@ -225,15 +225,15 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 	local proposalName
 	--- @type ControllerProposalData|EvalProposalData|nil
 	local newProposal
-	if msg.Tags.Type == "Add-Controller" or msg.Tags.Type == "Remove-Controller" then
+	if msg.Tags["Proposal-Type"] == "Add-Controller" or msg.Tags["Proposal-Type"] == "Remove-Controller" then
 		local controller = msg.Tags.Controller
 		assert(controller and type(controller) == "string" and #controller > 0, "Controller is required")
-		local shouldExist = msg.Tags.Type == "Remove-Controller"
+		local shouldExist = msg.Tags["Proposal-Type"] == "Remove-Controller"
 		assert(
 			(Tessera[msg.Tags.Controller] ~= nil) == shouldExist,
 			shouldExist and "Controller is not recognized" or "Controller already exists"
 		)
-		proposalName = msg.Tags.Type .. "_" .. msg.Tags.Controller
+		proposalName = msg.Tags["Proposal-Type"] .. "_" .. msg.Tags.Controller
 		assert(not Proposals[proposalName], "Proposal already exists")
 
 		ProposalNumber = ProposalNumber + 1
@@ -242,17 +242,17 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 		newProposal = {
 			proposalNumber = ProposalNumber,
 			msgId = msg.Id,
-			type = msg.Tags.Type,
+			type = msg.Tags["Proposal-Type"],
 			controller = msg.Tags.Controller,
 			yays = {},
 			nays = {},
 		}
-	elseif msg.Tags.Type == "Eval" then
+	elseif msg.Tags["Proposal-Type"] == "Eval" then
 		local processId = msg.Tags["Process-Id"]
 		assert(processId and type(processId) == "string", "Process-Id is required")
 		local evalStr = msg.Data
 		assert(evalStr and type(evalStr) == "string" and #evalStr > 0, "Eval string is expected in message Data")
-		proposalName = msg.Tags.Type .. "_" .. processId .. "_" .. msg.Id
+		proposalName = msg.Tags["Proposal-Type"] .. "_" .. processId .. "_" .. msg.Id
 		assert(not Proposals[proposalName], "Proposal already exists")
 
 		ProposalNumber = ProposalNumber + 1
@@ -260,7 +260,7 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 		newProposal = {
 			proposalNumber = ProposalNumber,
 			msgId = msg.Id,
-			type = msg.Tags.Type,
+			type = msg.Tags["Proposal-Type"],
 			processId = processId,
 			evalStr = evalStr,
 			yays = {},
@@ -283,7 +283,7 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 
 	Send(msg, {
 		Target = msg.From,
-		Action = "Propose-" .. msg.Tags.Type .. "-Notice",
+		Action = "Propose-" .. msg.Tags["Proposal-Type"] .. "-Notice",
 		Data = returnData,
 	})
 
