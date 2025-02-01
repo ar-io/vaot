@@ -459,6 +459,29 @@ describe('AOS Handlers:', () => {
               type: "Add-Controller",
             });
           });
+
+          it('should allow you to change your vote', async () => {
+            const result = await handle({
+              options: {
+                Tags: [
+                  { name: 'Action', value: 'Vote' },
+                  { name: 'Proposal-Number', value: '2' },
+                  { name: 'Vote', value: 'nay' },
+                ],
+              },
+              mem: testMemory,
+            });
+            assert.deepEqual(JSON.parse(result.Messages[0].Data), {
+              proposalNumber: 2,
+              msgId: STUB_MESSAGE_ID,
+              yays: [],
+              nays: {
+                [PROCESS_OWNER]: true,
+              },
+              controller: 'new-controller2',
+              type: "Add-Controller",
+            });
+          });
         });
     
         it("should complete the proposal with a quorum of yay votes", async () => {
