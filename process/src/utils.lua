@@ -357,9 +357,9 @@ function utils.validateAndSanitizeInputs(table)
 		)
 		if type(value) == "string" then
 			assert(#key > 0, "Key cannot be empty")
-			assert(#value > 0, "Value cannot be empty")
+			assert(#value > 0, "Value for " .. key .. " cannot be empty")
 			assert(not string.match(key, "^%s+$"), "Key cannot be only whitespace")
-			assert(not string.match(value, "^%s+$"), "Value cannot be only whitespace")
+			assert(not string.match(value, "^%s+$"), "Value for " .. key .. " cannot be only whitespace")
 		end
 		if type(value) == "boolean" then
 			assert(value == true or value == false, "Boolean value must be true or false")
