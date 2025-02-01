@@ -188,7 +188,7 @@ function handleMaybeVoteQuorum(proposalName, msg)
 			Send(msg, {
 				Target = proposal.processId,
 				Action = "Eval",
-				["Proposal-Number"] = proposal.proposalNumber,
+				["Proposal-Number"] = tostring(proposal.proposalNumber),
 				Data = proposal.evalStr,
 			})
 		else
