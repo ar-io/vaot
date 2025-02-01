@@ -205,7 +205,7 @@ function handleMaybeVoteQuorum(proposalName, msg)
 		-- Proposal has reached quorum and failed
 		Proposals[proposalName] = nil
 		notifyProposalComplete(false)
-	else
+		--else
 		-- No quorum yet
 	end
 end
