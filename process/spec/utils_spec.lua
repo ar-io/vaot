@@ -315,7 +315,7 @@ describe("utils", function()
 
 		it("should return the key and value for the first entry that matches the predicate", function()
 			local input = { a = 1, b = 2, c = 3 }
-			local key, value = utils.findInTable(input, function(k, v)
+			local key, value = utils.findInTable(input, function(_, v)
 				return v == 2
 			end)
 			assert.are.equal("b", key)
@@ -326,7 +326,7 @@ describe("utils", function()
 			"should return the key and value for the first entry that matches the predicate, even if the key is not a string",
 			function()
 				local input = { [1] = 1, [2] = 2, [3] = 3 }
-				local key, value = utils.findInTable(input, function(k, v)
+				local key, value = utils.findInTable(input, function(_, v)
 					return v == 2
 				end)
 				assert.are.equal(2, key)
@@ -336,7 +336,7 @@ describe("utils", function()
 
 		it("should return nil if no entries match the predicate", function()
 			local input = { a = 1, b = 2, c = 3 }
-			local key, value = utils.findInTable(input, function(k, v)
+			local key, value = utils.findInTable(input, function(_, v)
 				return v == 4
 			end)
 			assert.is_nil(key)
