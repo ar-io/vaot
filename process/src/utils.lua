@@ -526,4 +526,12 @@ function utils.findInTable(tbl, predicate)
 	return nil, nil
 end
 
+function utils.getTableKeys(tbl)
+	local keys = {}
+	for key, _ in pairs(tbl or {}) do
+		table.insert(keys, key)
+	end
+	return keys
+end
+
 return utils
