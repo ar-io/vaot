@@ -260,7 +260,7 @@ local function keccak256(data)
 end
 
 --- Converts an address to EIP-55 checksum format
---- Assumes address has been validated as a valid Ethereum address (see utils.isValidEthAddress)
+--- Assumes address has been validated as a valid Ethereum address
 --- Reference: https://eips.ethereum.org/EIPS/eip-55
 --- @param address string The address to convert
 --- @return string formattedAddress - the EIP-55 checksum formatted address
