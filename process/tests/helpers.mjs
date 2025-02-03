@@ -76,7 +76,7 @@ export async function getControllers(memory) {
     },
     mem: memory,
   });
-  return Object.keys(JSON.parse(result.Messages[0].Data)).sort();
+  return JSON.parse(result.Messages[0].Data).sort();
 }
 
 export async function getProposals(memory) {

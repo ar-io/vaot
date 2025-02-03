@@ -67,7 +67,7 @@ end
 --- @field From string
 --- @field Timestamp Timestamp
 --- @field Tags table<string, any>
---- @field ioEvent TEvent
+--- @field aoEvent TEvent
 --- @field Cast boolean?
 --- @field reply? fun(response: any)
 
@@ -92,9 +92,9 @@ local function addEventingHandler(handlerName, pattern, handleFn, critical, prin
 	printEvent = printEvent == nil and true or printEvent
 	Handlers.add(handlerName, pattern, function(msg)
 		-- add an TEvent to the message if it doesn't exist
-		msg.ioEvent = msg.ioEvent or TEvent(msg)
+		msg.aoEvent = msg.aoEvent or TEvent(msg)
 		-- global handler for all eventing errors, so we can log them and send a notice to the sender for non critical errors and discard the memory on critical errors
-		local status, resultOrError = eventingPcall(msg.ioEvent, function(error)
+		local status, resultOrError = eventingPcall(msg.aoEvent, function(error)
 			--- non critical errors will send an invalid notice back to the caller with the error information, memory is not discarded
 			Send(msg, {
 				Target = msg.From,
@@ -114,7 +114,7 @@ local function addEventingHandler(handlerName, pattern, handleFn, critical, prin
 			error(errorWithEvent, 0) -- 0 ensures not to include this line number in the error message
 		end
 		if printEvent then
-			msg.ioEvent:printEvent()
+			msg.aoEvent:printEvent()
 		end
 	end)
 end
@@ -164,6 +164,23 @@ function handleMaybeVoteQuorum(proposalName, msg)
 	local majorityThreshold = math.floor(utils.lengthOfTable(Tessera) / 2) + 1
 	print("majorityThreshold " .. majorityThreshold)
 
+	msg.aoEvent:addField("Controllers-Count", utils.lengthOfTable(Tessera))
+	msg.aoEvent:addField("Controllers", utils.getTableKeys(Tessera))
+	msg.aoEvent:addField("Proposal-Number", proposal.proposalNumber)
+	msg.aoEvent:addField("Proposal-Name", proposalName)
+	msg.aoEvent:addField("Proposal-Type", proposal.type)
+	msg.aoEvent:addField("Yays-Count", yaysCount)
+	msg.aoEvent:addField("Yays", utils.getTableKeys(proposal.yays))
+	msg.aoEvent:addField("Nays-Count", naysCount)
+	msg.aoEvent:addField("Nays", utils.getTableKeys(proposal.nays))
+	msg.aoEvent:addField("Majority-Threshold", majorityThreshold)
+	if proposal.controller then
+		msg.aoEvent:addField("Controller", proposal.controller)
+	end
+	if proposal.processId then
+		msg.aoEvent:addField("Process-Id", proposal.processId)
+	end
+
 	--- @param accepted boolean
 	local function notifyProposalComplete(accepted)
 		local returnData = utils.deepCopy(proposal)
@@ -180,6 +197,7 @@ function handleMaybeVoteQuorum(proposalName, msg)
 
 	if yaysCount >= majorityThreshold then
 		-- Proposal has passed
+		msg.aoEvent:addField("Proposal-Status", "Passed")
 		if proposal.type == "Add-Controller" then
 			Tessera[proposal.controller] = true
 		elseif proposal.type == "Remove-Controller" then
@@ -199,14 +217,17 @@ function handleMaybeVoteQuorum(proposalName, msg)
 		notifyProposalComplete(true)
 	elseif naysCount >= majorityThreshold then
 		-- Proposal has failed
+		msg.aoEvent:addField("Proposal-Status", "Failed")
 		Proposals[proposalName] = nil
 		notifyProposalComplete(false)
 	elseif yaysCount + naysCount >= utils.lengthOfTable(Tessera) then
 		-- Proposal has reached quorum and failed
+		msg.aoEvent:addField("Proposal-Status", "Failed")
 		Proposals[proposalName] = nil
 		notifyProposalComplete(false)
-		--else
+	else
 		-- No quorum yet
+		msg.aoEvent:addField("Proposal-Status", "In Progress")
 	end
 end
 
@@ -321,7 +342,7 @@ addEventingHandler("controllers", Handlers.utils.hasMatchingTag("Action", "Get-C
 	Send(msg, {
 		Target = msg.From,
 		Action = "Get-Controllers-Notice",
-		Data = Tessera,
+		Data = utils.getTableKeys(Tessera),
 	})
 end)
 
