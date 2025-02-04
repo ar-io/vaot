@@ -1,4 +1,4 @@
-package = "tesserao"
+package = "vaot"
 version = "0.1-0"
 rockspec_format = "3.0"
 source = {
