@@ -1,8 +1,8 @@
 {
-  "name": "tesserao",
+  "name": "vaot",
   "version": "0.1.0",
   "main": "dist/index.js",
-  "repository": "https://github.com/ar-io/tesserao.git",
+  "repository": "https://github.com/ar-io/vaot.git",
   "author": "Ariel Melendez <ariel@pds.inc>",
   "license": "MIT",
   "private": false,
