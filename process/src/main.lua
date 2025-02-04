@@ -7,9 +7,9 @@ Owner = Owner or ao.env.Process.Owner
 --- @alias ProcessId string
 --- @alias MessageId string
 
--- Tessera are voting tokens, one per WalletAddress
+-- Controllers can create action proposals and vote on them
 --- @type table<WalletAddress, any>
-Tessera = Tessera or {
+Controllers = Controllers or {
 	[Owner] = true,
 }
 
@@ -161,11 +161,12 @@ function handleMaybeVoteQuorum(proposalName, msg)
 	local proposal = Proposals[proposalName]
 	local yaysCount = utils.lengthOfTable(proposal.yays)
 	local naysCount = utils.lengthOfTable(proposal.nays)
-	local majorityThreshold = math.floor(utils.lengthOfTable(Tessera) / 2) + 1
-	print("majorityThreshold " .. majorityThreshold)
+	local passThreshold = math.floor(utils.lengthOfTable(Controllers) / 2) + 1
+	local controllersCount = utils.lengthOfTable(Controllers)
+	local failThreshold = math.max(controllersCount - passThreshold, 1)
 
-	msg.aoEvent:addField("Controllers-Count", utils.lengthOfTable(Tessera))
-	msg.aoEvent:addField("Controllers", utils.getTableKeys(Tessera))
+	msg.aoEvent:addField("Controllers-Count", utils.lengthOfTable(Controllers))
+	msg.aoEvent:addField("Controllers", utils.getTableKeys(Controllers))
 	msg.aoEvent:addField("Proposal-Number", proposal.proposalNumber)
 	msg.aoEvent:addField("Proposal-Name", proposalName)
 	msg.aoEvent:addField("Proposal-Type", proposal.type)
@@ -173,7 +174,8 @@ function handleMaybeVoteQuorum(proposalName, msg)
 	msg.aoEvent:addField("Yays", utils.getTableKeys(proposal.yays))
 	msg.aoEvent:addField("Nays-Count", naysCount)
 	msg.aoEvent:addField("Nays", utils.getTableKeys(proposal.nays))
-	msg.aoEvent:addField("Majority-Threshold", majorityThreshold)
+	msg.aoEvent:addField("Pass-Threshold", passThreshold)
+	msg.aoEvent:addField("Fail-Threshold", failThreshold)
 	if proposal.controller then
 		msg.aoEvent:addField("Controller", proposal.controller)
 	end
@@ -186,7 +188,7 @@ function handleMaybeVoteQuorum(proposalName, msg)
 		local returnData = utils.deepCopy(proposal)
 		--- @diagnostic disable-next-line: inject-field
 		returnData.proposalName = proposalName
-		for address, _ in pairs(Tessera) do
+		for address, _ in pairs(Controllers) do
 			Send(msg, {
 				Target = address,
 				Action = accepted and "Proposal-Accepted-Notice" or "Proposal-Rejected-Notice",
@@ -195,13 +197,13 @@ function handleMaybeVoteQuorum(proposalName, msg)
 		end
 	end
 
-	if yaysCount >= majorityThreshold then
+	if yaysCount >= passThreshold then
 		-- Proposal has passed
 		msg.aoEvent:addField("Proposal-Status", "Passed")
 		if proposal.type == "Add-Controller" then
-			Tessera[proposal.controller] = true
+			Controllers[proposal.controller] = true
 		elseif proposal.type == "Remove-Controller" then
-			Tessera[proposal.controller] = nil
+			Controllers[proposal.controller] = nil
 		elseif proposal.type == "Eval" then
 			Send(msg, {
 				Target = proposal.processId,
@@ -215,13 +217,8 @@ function handleMaybeVoteQuorum(proposalName, msg)
 
 		Proposals[proposalName] = nil
 		notifyProposalComplete(true)
-	elseif naysCount >= majorityThreshold then
+	elseif naysCount >= failThreshold then
 		-- Proposal has failed
-		msg.aoEvent:addField("Proposal-Status", "Failed")
-		Proposals[proposalName] = nil
-		notifyProposalComplete(false)
-	elseif yaysCount + naysCount >= utils.lengthOfTable(Tessera) then
-		-- Proposal has reached quorum and failed
 		msg.aoEvent:addField("Proposal-Status", "Failed")
 		Proposals[proposalName] = nil
 		notifyProposalComplete(false)
@@ -232,7 +229,7 @@ function handleMaybeVoteQuorum(proposalName, msg)
 end
 
 addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose"), function(msg)
-	assert(Tessera[msg.From], "Sender is not a registered Controller!")
+	assert(Controllers[msg.From], "Sender is not a registered Controller!")
 	assert(
 		SupportedProposalTypes[msg.Tags["Proposal-Type"] or "unknown"],
 		"Proposal-Type is required and must be one of: 'Add-Controller', 'Remove-Controller', or 'Eval'"
@@ -251,7 +248,7 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 		assert(controller and type(controller) == "string" and #controller > 0, "Controller is required")
 		local shouldExist = msg.Tags["Proposal-Type"] == "Remove-Controller"
 		assert(
-			(Tessera[msg.Tags.Controller] ~= nil) == shouldExist,
+			(Controllers[msg.Tags.Controller] ~= nil) == shouldExist,
 			shouldExist and "Controller is not recognized" or "Controller already exists"
 		)
 		proposalName = msg.Tags["Proposal-Type"] .. "_" .. msg.Tags.Controller
@@ -312,7 +309,7 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 end)
 
 addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), function(msg)
-	assert(Tessera[msg.From], "Sender is not a registered Controller!")
+	assert(Controllers[msg.From], "Sender is not a registered Controller!")
 	assert(msg.Tags["Proposal-Number"], "Proposal-Number is required")
 	local vote = msg.Tags.Vote
 	assert(vote and vote == "yay" or vote == "nay", "A Vote of 'yay' or 'nay' is required")
@@ -342,7 +339,7 @@ addEventingHandler("controllers", Handlers.utils.hasMatchingTag("Action", "Get-C
 	Send(msg, {
 		Target = msg.From,
 		Action = "Get-Controllers-Notice",
-		Data = utils.getTableKeys(Tessera),
+		Data = utils.getTableKeys(Controllers),
 	})
 end)
 

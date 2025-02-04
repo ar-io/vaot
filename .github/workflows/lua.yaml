@@ -1,4 +1,4 @@
-name: 🗳️ TesserAO Process
+name: 🗳️ vAOt Process
 
 on:
   pull_request:
@@ -60,7 +60,7 @@ jobs:
         uses: leafo/gh-actions-luarocks@v4.3.0
 
       - name: Install Busted
-        run: luarocks install tesserao-0.1-0.rockspec
+        run: luarocks install vaot-0.1-0.rockspec
 
       - name: Run Busted Tests
         run: yarn test:unit
@@ -80,31 +80,31 @@ jobs:
       - run: yarn evolve
         env:
           WALLET: ${{ secrets.WALLET }}
-          TESSERAO_PROCESS_ID: ${{ vars.TESSERAO_PROCESS_ID }}
+          VAOT_PROCESS_ID: ${{ vars.VAOT_PROCESS_ID }}
           AO_CU_URL: ${{ vars.AO_CU_URL }}
       - name: Notify Success
         if: success()
         uses: rtCamp/action-slack-notify@v2.3.0
         env:
           SLACK_COLOR: ${{ job.status }}
-          SLACK_TITLE: Updated the TesserAO Process (${{ vars.TESSERAO_PROCESS_ID }})!
+          SLACK_TITLE: Updated the vAOt Process (${{ vars.VAOT_PROCESS_ID }})!
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_CUSTOM_PAYLOAD: |
             {
               "attachments": [{
-                "fallback": "Updated the TesserAO Process (${{ vars.TESSERAO_PROCESS_ID }})!",
+                "fallback": "Updated the vAOt Process (${{ vars.VAOT_PROCESS_ID }})!",
                 "color": "good",
                 "title": "Details",
-                "text": 'The TesserAO Process has been updated!',
+                "text": 'The vAOt Process has been updated!',
                 "fields": [
                 {
                   "title": "Process ID",
-                  "value": "${{ vars.TESSERAO_PROCESS_ID }}",
+                  "value": "${{ vars.VAOT_PROCESS_ID }}",
                   "short": true
                 },
                 {
                   "title": "View on ao.link",
-                  "value": "https://www.ao.link/#/entity/${{ vars.TESSERAO_PROCESS_ID }}?tab=source-code",
+                  "value": "https://www.ao.link/#/entity/${{ vars.VAOT_PROCESS_ID }}?tab=source-code",
                   "short": false
                 }
                 ,
@@ -121,20 +121,20 @@ jobs:
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_COLOR: danger
-          SLACK_TITLE: TesserAO Process Evolution Failed!
+          SLACK_TITLE: vAOt Process Evolution Failed!
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_CUSTOM_PAYLOAD: |
             {
               "text": "IO Process Evolution Failed!",
               "attachments": [{
-                "fallback": "Failed to update the TesserAO Process (${{ vars.TESSERAO_PROCESS_ID }})!",
+                "fallback": "Failed to update the vAOt Process (${{ vars.VAOT_PROCESS_ID }})!",
                 "color": "danger",
                 "title": "Details",
-                "text": 'The IO "${{ github.ref_name == 'main' && 'testnet' || 'devnet' }} Process ( ${{ vars.TESSERAO_PROCESS_ID }}) FAILED to update!',
+                "text": 'The IO "${{ github.ref_name == 'main' && 'testnet' || 'devnet' }} Process ( ${{ vars.VAOT_PROCESS_ID }}) FAILED to update!',
                 "fields": [
                 {
                   "title": "Process ID",
-                  "value": "${{ vars.TESSERAO_PROCESS_ID }}",
+                  "value": "${{ vars.VAOT_PROCESS_ID }}",
                   "short": true
                 },
                 {
