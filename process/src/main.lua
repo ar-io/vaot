@@ -161,8 +161,9 @@ function handleMaybeVoteQuorum(proposalName, msg)
 	local proposal = Proposals[proposalName]
 	local yaysCount = utils.lengthOfTable(proposal.yays)
 	local naysCount = utils.lengthOfTable(proposal.nays)
-	local majorityThreshold = math.floor(utils.lengthOfTable(Controllers) / 2) + 1
-	print("majorityThreshold " .. majorityThreshold)
+	local passThreshold = math.floor(utils.lengthOfTable(Controllers) / 2) + 1
+	local controllersCount = utils.lengthOfTable(Controllers)
+	local failThreshold = math.max(controllersCount - passThreshold, 1)
 
 	msg.aoEvent:addField("Controllers-Count", utils.lengthOfTable(Controllers))
 	msg.aoEvent:addField("Controllers", utils.getTableKeys(Controllers))
@@ -173,7 +174,8 @@ function handleMaybeVoteQuorum(proposalName, msg)
 	msg.aoEvent:addField("Yays", utils.getTableKeys(proposal.yays))
 	msg.aoEvent:addField("Nays-Count", naysCount)
 	msg.aoEvent:addField("Nays", utils.getTableKeys(proposal.nays))
-	msg.aoEvent:addField("Majority-Threshold", majorityThreshold)
+	msg.aoEvent:addField("Pass-Threshold", passThreshold)
+	msg.aoEvent:addField("Fail-Threshold", failThreshold)
 	if proposal.controller then
 		msg.aoEvent:addField("Controller", proposal.controller)
 	end
@@ -195,7 +197,7 @@ function handleMaybeVoteQuorum(proposalName, msg)
 		end
 	end
 
-	if yaysCount >= majorityThreshold then
+	if yaysCount >= passThreshold then
 		-- Proposal has passed
 		msg.aoEvent:addField("Proposal-Status", "Passed")
 		if proposal.type == "Add-Controller" then
@@ -215,13 +217,8 @@ function handleMaybeVoteQuorum(proposalName, msg)
 
 		Proposals[proposalName] = nil
 		notifyProposalComplete(true)
-	elseif naysCount >= majorityThreshold then
+	elseif naysCount >= failThreshold then
 		-- Proposal has failed
-		msg.aoEvent:addField("Proposal-Status", "Failed")
-		Proposals[proposalName] = nil
-		notifyProposalComplete(false)
-	elseif yaysCount + naysCount >= utils.lengthOfTable(Controllers) then
-		-- Proposal has reached quorum and failed
 		msg.aoEvent:addField("Proposal-Status", "Failed")
 		Proposals[proposalName] = nil
 		notifyProposalComplete(false)
