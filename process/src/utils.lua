@@ -260,7 +260,7 @@ local function keccak256(data)
 end
 
 --- Converts an address to EIP-55 checksum format
---- Assumes address has been validated as a valid Ethereum address (see utils.isValidEthAddress)
+--- Assumes address has been validated as a valid Ethereum address
 --- Reference: https://eips.ethereum.org/EIPS/eip-55
 --- @param address string The address to convert
 --- @return string formattedAddress - the EIP-55 checksum formatted address
@@ -319,6 +319,219 @@ function utils.toTrainCase(str)
 		end
 	end)
 	return str
+end
+
+--- Checks if a value is an integer
+--- @param value any The value to check
+--- @return boolean isInteger - whether the value is an integer
+function utils.isInteger(value)
+	if value == nil then
+		return false
+	end
+	if type(value) == "string" then
+		value = tonumber(value)
+	end
+	return type(value) == "number" and value % 1 == 0
+end
+
+--- @param value string|boolean
+--- @return boolean
+function utils.booleanOrBooleanStringToBoolean(value)
+	if type(value) == "boolean" then
+		return value
+	end
+	return type(value) == "string" and string.lower(value) == "true"
+end
+
+--- Sanitizes inputs to ensure they are valid strings
+--- @param table table The table to sanitize
+--- @return table sanitizedTable - the sanitized table
+function utils.validateAndSanitizeInputs(table)
+	assert(type(table) == "table", "Table must be a table")
+	local sanitizedTable = {}
+	for key, value in pairs(table) do
+		assert(type(key) == "string", "Key must be a string")
+		assert(
+			type(value) == "string" or type(value) == "number" or type(value) == "boolean",
+			"Value must be a string, integer, or boolean"
+		)
+		if type(value) == "string" then
+			assert(#key > 0, "Key cannot be empty")
+			assert(#value > 0, "Value for " .. key .. " cannot be empty")
+			assert(not string.match(key, "^%s+$"), "Key cannot be only whitespace")
+			assert(not string.match(value, "^%s+$"), "Value for " .. key .. " cannot be only whitespace")
+		end
+		if type(value) == "boolean" then
+			assert(value == true or value == false, "Boolean value must be true or false")
+		end
+		if type(value) == "number" then
+			assert(utils.isInteger(value), "Number must be an integer")
+		end
+		sanitizedTable[key] = value
+	end
+
+	local knownAddressTags = {
+		"Process-Id",
+		"Controller",
+	}
+
+	for _, tagName in ipairs(knownAddressTags) do
+		-- Format all incoming addresses
+		sanitizedTable[tagName] = sanitizedTable[tagName] and utils.formatAddress(sanitizedTable[tagName]) or nil
+	end
+
+	local knownNumberTags = {
+		"Timestamp",
+		"Proposal-Number",
+	}
+	for _, tagName in ipairs(knownNumberTags) do
+		-- Format all incoming numbers
+		sanitizedTable[tagName] = sanitizedTable[tagName] and tonumber(sanitizedTable[tagName]) or nil
+	end
+
+	local knownBooleanTags = {}
+	for _, tagName in ipairs(knownBooleanTags) do
+		sanitizedTable[tagName] = sanitizedTable[tagName]
+				and utils.booleanOrBooleanStringToBoolean(sanitizedTable[tagName])
+			or nil
+	end
+	return sanitizedTable
+end
+
+--- Gets the length of a table
+--- @param table table The table to get the length of
+--- @return number length - the length of the table
+function utils.lengthOfTable(table)
+	local count = 0
+	for _, val in pairs(table) do
+		if val then
+			count = count + 1
+		end
+	end
+	return count
+end
+
+function utils.createLookupTable(tbl, valueFn)
+	local lookupTable = {}
+	valueFn = valueFn or function()
+		return true
+	end
+	for key, value in pairs(tbl or {}) do
+		lookupTable[value] = valueFn(key, value)
+	end
+	return lookupTable
+end
+
+--- Deep copies a table with optional exclusion of specified fields, including nested fields
+--- Preserves proper sequential ordering of array tables when some of the excluded nested keys are array indexes
+--- @generic T: table|nil
+--- @param original T The table to copy
+--- @param excludedFields table|nil An array of keys or dot-separated key paths to exclude from the deep copy
+--- @return T The deep copy of the table or nil if the original is nil
+function utils.deepCopy(original, excludedFields)
+	if not original then
+		return nil
+	end
+
+	if type(original) ~= "table" then
+		return original
+	end
+
+	-- Fast path: If no excluded fields, copy directly
+	if not excludedFields or #excludedFields == 0 then
+		local copy = {}
+		for key, value in pairs(original) do
+			if type(value) == "table" then
+				copy[key] = utils.deepCopy(value) -- Recursive copy for nested tables
+			else
+				copy[key] = value
+			end
+		end
+		return copy
+	end
+
+	-- If excludes are provided, create a lookup table for excluded fields
+	local excluded = utils.createLookupTable(excludedFields)
+
+	-- Helper function to check if a key path is excluded
+	local function isExcluded(keyPath)
+		for excludedKey in pairs(excluded) do
+			if keyPath == excludedKey or keyPath:match("^" .. excludedKey .. "%.") then
+				return true
+			end
+		end
+		return false
+	end
+
+	-- Recursive function to deep copy with nested field exclusion
+	local function deepCopyHelper(orig, path)
+		if type(orig) ~= "table" then
+			return orig
+		end
+
+		local result = {}
+		local isArray = true
+
+		-- Check if all keys are numeric and sequential
+		for key in pairs(orig) do
+			if type(key) ~= "number" or key % 1 ~= 0 then
+				isArray = false
+				break
+			end
+		end
+
+		if isArray then
+			-- Collect numeric keys in sorted order for sequential reindexing
+			local numericKeys = {}
+			for key in pairs(orig) do
+				table.insert(numericKeys, key)
+			end
+			table.sort(numericKeys)
+
+			local index = 1
+			for _, key in ipairs(numericKeys) do
+				local keyPath = path and (path .. "." .. key) or tostring(key)
+				if not isExcluded(keyPath) then
+					result[index] = deepCopyHelper(orig[key], keyPath) -- Sequentially reindex
+					index = index + 1
+				end
+			end
+		else
+			-- Handle non-array tables (dictionaries)
+			for key, value in pairs(orig) do
+				local keyPath = path and (path .. "." .. key) or key
+				if not isExcluded(keyPath) then
+					result[key] = deepCopyHelper(value, keyPath)
+				end
+			end
+		end
+
+		return result
+	end
+
+	-- Use the exclusion-aware deep copy helper
+	return deepCopyHelper(original, nil)
+end
+
+--- Finds an element in an array that matches a predicate
+--- @param tbl table The table to search
+--- @param predicate fun(key, value) : boolean The predicate to match
+--- @return any|nil,any|nil # The found key and value or nils if not found
+function utils.findInTable(tbl, predicate)
+	for key, value in pairs(tbl) do
+		if predicate(key, value) then
+			return key, value
+		end
+	end
+	return nil, nil
+end
+
+function utils.getTableKeys(tbl)
+	local keys = {}
+	for key, _ in pairs(tbl or {}) do
+		table.insert(keys, key)
+	end
+	return keys
 end
 
 return utils
