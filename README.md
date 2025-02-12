@@ -10,7 +10,7 @@ Propose and vAOt to:
 
 Suggested workflow for controlling processes with multi-sig-like protections:
 
-1. Instantiate a vAOt process. The initial `Owner` of the vAOt process will be the process creator.
+1. Instantiate a vAOt process. The process creator will be the initial `Owner` of the vAOt process as well as the first Controller.
 2. Assign ownership of the vAOt process to either: a) the process itself if you want Controllers to manage upgrades or Ownership or state changes of the vAOt process or b) nil if you want the vAOt process to remain unowned
 3. Add other Controllers via proposal and voting workflows.
 4. Assign the `Owner` of a target process that you'd like to manage via vAOt to the vAOt process. The Controllers can now collectively manage the target process via proposal and voting workflows.
