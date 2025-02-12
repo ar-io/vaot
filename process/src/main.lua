@@ -194,7 +194,18 @@ end
 --- @param excludedProposalNames ProposalName[]
 local function reassessQuorumOnAllProposals(msg, excludedProposalNames)
 	local excludedProposalNamesLookup = utils.createLookupTable(excludedProposalNames)
-	for proposalName, _ in pairs(Proposals) do
+
+	-- First sort the proposals by proposal ID so that there's a deterministic order of operations here
+	local sortedProposalIds = {}
+	local proposalIdToProposalName = {}
+	for proposalName, proposal in pairs(Proposals) do
+		table.insert(sortedProposalIds, proposal.proposalNumber)
+		proposalIdToProposalName[proposal.proposalNumber] = proposalName
+	end
+	table.sort(sortedProposalIds)
+
+	for _, proposalId in ipairs(sortedProposalIds) do
+		local proposalName = proposalIdToProposalName[proposalId]
 		if not excludedProposalNamesLookup[proposalName] then
 			local subAoEvent = TEvent(msg)
 			handleMaybeVoteQuorum(proposalName, msg, subAoEvent)

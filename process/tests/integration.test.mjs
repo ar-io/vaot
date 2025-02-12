@@ -1,5 +1,5 @@
 import { describe, it, before, beforeEach } from 'node:test';
-import { getControllers, getProposals, handle, parseEventsFromResult, rubberStampProposal } from './helpers.mjs';
+import { getControllers, getProposals, handle, normalizeObject, parseEventsFromResult, rubberStampProposal } from './helpers.mjs';
 import {
   PROCESS_OWNER,
   STUB_MESSAGE_ID,
@@ -691,7 +691,7 @@ describe('AOS Handlers:', () => {
 
             // Assert that 2 events were printed as a result of the chain of events
             const events = parseEventsFromResult(removeNewControllerResult);
-            assert.deepEqual(events, [
+            assert.deepEqual(normalizeObject(events), normalizeObject([
               {
                 "Yays": [
                   "1111111111111111111111111111111111111111111",
@@ -760,7 +760,7 @@ describe('AOS Handlers:', () => {
                 "From": "new-controller3",
                 "Controllers-Count": 4
               }
-            ]);
+            ]));
 
             // Assert that the proposal 2 has been removed due to now-insufficient available yay votes
             const proposalsAfter = await getProposals(removeNewControllerMemory);

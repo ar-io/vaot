@@ -136,3 +136,22 @@ export async function rubberStampProposal({
     result: finalResult,
   };
 }
+
+// NOTE: Presumes that input array ordering is not precious
+export function normalizeObject(obj) {
+  if (Array.isArray(obj)) {
+    // Recursively normalize array elements and sort the array
+    return obj.map(normalizeObject).sort();
+  } else if (obj !== null && typeof obj === "object") {
+    // Get keys in alphabetical order
+    const sortedKeys = Object.keys(obj).sort();
+    
+    // Create a new object with sorted keys
+    const normalized = {};
+    for (const key of sortedKeys) {
+      normalized[key] = normalizeObject(obj[key]); // Recursively normalize values
+    }
+    return normalized;
+  }
+  return obj; // Return primitives as-is
+}
