@@ -400,6 +400,7 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 			evalStr = evalStr,
 			yays = {},
 			nays = {},
+			proposer = msg.From,
 		}
 	end
 	assert(proposalName, "proposalName not initialized")
