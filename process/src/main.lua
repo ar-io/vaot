@@ -214,7 +214,7 @@ function handleMaybeVoteQuorum(proposalName, msg, aoEvent)
 	local naysCount = utils.lengthOfTable(proposal.nays)
 	local passThreshold = math.floor(utils.lengthOfTable(Controllers) / 2) + 1
 	local controllersCount = utils.lengthOfTable(Controllers)
-	local failThreshold = math.max(controllersCount - passThreshold + 1, 1)
+	local failThreshold = controllersCount - passThreshold + 1
 
 	aoEvent:addField("Controllers-Count", utils.lengthOfTable(Controllers))
 	aoEvent:addField("Controllers", utils.getTableKeys(Controllers))
