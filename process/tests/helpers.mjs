@@ -96,6 +96,7 @@ export async function rubberStampProposal({
 }){
   const controllers = await getControllers(memory);
   const passThreshold = Math.floor(controllers.length / 2) + 1;
+  let finalResult;
   const proposeResult = await handle({
     options: {
       Tags: [
@@ -107,6 +108,7 @@ export async function rubberStampProposal({
     },
     mem: memory,
   });
+  finalResult = proposeResult;
   const proposalNumber = JSON.parse(proposeResult.Messages[0].Data).proposalNumber;
   let workingMemory = proposeResult.Memory;
   for (const controller of controllers.slice(1, passThreshold)) {
@@ -122,6 +124,7 @@ export async function rubberStampProposal({
       },
       mem: workingMemory,
     });
+    finalResult = voteResult;
     workingMemory = voteResult.Memory;
   }
   const proposals = await getProposals(workingMemory);
@@ -129,6 +132,7 @@ export async function rubberStampProposal({
   assert(!maybeProposal, "Proposal not successfully rubber stamped!");
   return {
     memory: workingMemory,
-    proposalNumber
+    proposalNumber,
+    result: finalResult,
   };
 }

@@ -93,6 +93,8 @@ local function addEventingHandler(handlerName, pattern, handleFn, critical, prin
 	Handlers.add(handlerName, pattern, function(msg)
 		-- add an TEvent to the message if it doesn't exist
 		msg.aoEvent = msg.aoEvent or TEvent(msg)
+		msg.subAoEvents = msg.subAoEvents or {}
+
 		-- global handler for all eventing errors, so we can log them and send a notice to the sender for non critical errors and discard the memory on critical errors
 		local status, resultOrError = eventingPcall(msg.aoEvent, function(error)
 			--- non critical errors will send an invalid notice back to the caller with the error information, memory is not discarded
@@ -115,6 +117,9 @@ local function addEventingHandler(handlerName, pattern, handleFn, critical, prin
 		end
 		if printEvent then
 			msg.aoEvent:printEvent()
+			for _, subAoEvent in pairs(msg.subAoEvents) do
+				subAoEvent:printEvent()
+			end
 		end
 	end)
 end
@@ -154,41 +159,93 @@ end, function(msg)
 	updateLastKnownMessage(msg)
 end, CRITICAL, false)
 
+--- @param controller WalletAddress
+--- @param excludedProposalNames ProposalName[]
+--- @param aoEvent TEvent
+local function removeVotesForController(controller, excludedProposalNames, aoEvent)
+	local excludedProposalNamesLookup = utils.createLookupTable(excludedProposalNames)
+	local removedYays = {}
+	local removedNays = {}
+	for proposalName, proposal in pairs(Proposals) do
+		if not excludedProposalNamesLookup[proposalName] then
+			if proposal.yays[controller] then
+				print("Removing yay vote by " .. controller .. " from " .. proposalName)
+				proposal.yays[controller] = nil
+				table.insert(removedYays, tostring(proposal.proposalNumber))
+			end
+			if proposal.nays[controller] then
+				print("Removing nay vote by " .. controller .. " from " .. proposalName)
+				proposal.nays[controller] = nil
+				table.insert(removedNays, tostring(proposal.proposalNumber))
+			end
+		end
+	end
+	if #removedYays > 0 then
+		aoEvent:addField("Removed-Yays", removedYays)
+		aoEvent:addField("Removed-Yays-Count", #removedYays)
+	end
+	if #removedNays > 0 then
+		aoEvent:addField("Removed-Nays", removedNays)
+		aoEvent:addField("Removed-Nays-Count", #removedNays)
+	end
+end
+
+--- @param msg ParsedMessage
+--- @param excludedProposalNames ProposalName[]
+local function reassessQuorumOnAllProposals(msg, excludedProposalNames)
+	local excludedProposalNamesLookup = utils.createLookupTable(excludedProposalNames)
+	for proposalName, _ in pairs(Proposals) do
+		if not excludedProposalNamesLookup[proposalName] then
+			local subAoEvent = TEvent(msg)
+			handleMaybeVoteQuorum(proposalName, msg, subAoEvent)
+		end
+	end
+end
+
 --- @param proposalName ProposalName
 --- @param msg ParsedMessage
-function handleMaybeVoteQuorum(proposalName, msg)
+--- @param aoEvent TEvent?
+function handleMaybeVoteQuorum(proposalName, msg, aoEvent)
+	aoEvent = aoEvent or msg.aoEvent
+
 	-- Check whether the proposal has passed...
 	local proposal = Proposals[proposalName]
 	local yaysCount = utils.lengthOfTable(proposal.yays)
 	local naysCount = utils.lengthOfTable(proposal.nays)
 	local passThreshold = math.floor(utils.lengthOfTable(Controllers) / 2) + 1
 	local controllersCount = utils.lengthOfTable(Controllers)
-	local failThreshold = math.max(controllersCount - passThreshold, 1)
+	local failThreshold = math.max(controllersCount - passThreshold + 1, 1)
 
-	msg.aoEvent:addField("Controllers-Count", utils.lengthOfTable(Controllers))
-	msg.aoEvent:addField("Controllers", utils.getTableKeys(Controllers))
-	msg.aoEvent:addField("Proposal-Number", proposal.proposalNumber)
-	msg.aoEvent:addField("Proposal-Name", proposalName)
-	msg.aoEvent:addField("Proposal-Type", proposal.type)
-	msg.aoEvent:addField("Yays-Count", yaysCount)
-	msg.aoEvent:addField("Yays", utils.getTableKeys(proposal.yays))
-	msg.aoEvent:addField("Nays-Count", naysCount)
-	msg.aoEvent:addField("Nays", utils.getTableKeys(proposal.nays))
-	msg.aoEvent:addField("Pass-Threshold", passThreshold)
-	msg.aoEvent:addField("Fail-Threshold", failThreshold)
+	aoEvent:addField("Controllers-Count", utils.lengthOfTable(Controllers))
+	aoEvent:addField("Controllers", utils.getTableKeys(Controllers))
+	aoEvent:addField("Proposal-Number", proposal.proposalNumber)
+	aoEvent:addField("Proposal-Name", proposalName)
+	aoEvent:addField("Proposal-Type", proposal.type)
+	aoEvent:addField("Yays-Count", yaysCount)
+	aoEvent:addField("Yays", utils.getTableKeys(proposal.yays))
+	aoEvent:addField("Nays-Count", naysCount)
+	aoEvent:addField("Nays", utils.getTableKeys(proposal.nays))
+	aoEvent:addField("Pass-Threshold", passThreshold)
+	aoEvent:addField("Fail-Threshold", failThreshold)
 	if proposal.controller then
-		msg.aoEvent:addField("Controller", proposal.controller)
+		aoEvent:addField("Controller", proposal.controller)
 	end
 	if proposal.processId then
-		msg.aoEvent:addField("Process-Id", proposal.processId)
+		aoEvent:addField("Process-Id", proposal.processId)
 	end
 
 	--- @param accepted boolean
-	local function notifyProposalComplete(accepted)
+	--- @param recipients table<WalletAddress, any>
+	local function notifyProposalComplete(accepted, recipients)
+		-- Send additional events if other proposals were completed
+		if msg.aoEvent ~= aoEvent then
+			table.insert(msg.subAoEvents, aoEvent)
+		end
+
 		local returnData = utils.deepCopy(proposal)
 		--- @diagnostic disable-next-line: inject-field
 		returnData.proposalName = proposalName
-		for address, _ in pairs(Controllers) do
+		for address, _ in pairs(recipients) do
 			Send(msg, {
 				Target = address,
 				Action = accepted and "Proposal-Accepted-Notice" or "Proposal-Rejected-Notice",
@@ -198,12 +255,29 @@ function handleMaybeVoteQuorum(proposalName, msg)
 	end
 
 	if yaysCount >= passThreshold then
+		print(
+			"Proposal "
+				.. proposalName
+				.. " with passThreshold "
+				.. passThreshold
+				.. " and failThreshold "
+				.. failThreshold
+				.. " has passed with "
+				.. yaysCount
+				.. " yays and "
+				.. naysCount
+				.. " nays"
+		)
 		-- Proposal has passed
-		msg.aoEvent:addField("Proposal-Status", "Passed")
+		aoEvent:addField("Proposal-Status", "Passed")
+		local notificationRecipients = utils.deepCopy(Controllers)
 		if proposal.type == "Add-Controller" then
 			Controllers[proposal.controller] = true
 		elseif proposal.type == "Remove-Controller" then
 			Controllers[proposal.controller] = nil
+			removeVotesForController(proposal.controller, { proposalName }, aoEvent)
+			-- Side effect: removed controller will not know the outcome of these proposals
+			reassessQuorumOnAllProposals(msg, { proposalName })
 		elseif proposal.type == "Eval" then
 			Send(msg, {
 				Target = proposal.processId,
@@ -216,15 +290,28 @@ function handleMaybeVoteQuorum(proposalName, msg)
 		end
 
 		Proposals[proposalName] = nil
-		notifyProposalComplete(true)
+		notifyProposalComplete(true, notificationRecipients)
 	elseif naysCount >= failThreshold then
+		print(
+			"Proposal "
+				.. proposalName
+				.. " with passThreshold "
+				.. passThreshold
+				.. " and failThreshold "
+				.. failThreshold
+				.. " has failed with "
+				.. yaysCount
+				.. " yays and "
+				.. naysCount
+				.. " nays"
+		)
 		-- Proposal has failed
-		msg.aoEvent:addField("Proposal-Status", "Failed")
+		aoEvent:addField("Proposal-Status", "Failed")
 		Proposals[proposalName] = nil
-		notifyProposalComplete(false)
+		notifyProposalComplete(false, Controllers)
 	else
 		-- No quorum yet
-		msg.aoEvent:addField("Proposal-Status", "In Progress")
+		aoEvent:addField("Proposal-Status", "In Progress")
 	end
 end
 

@@ -407,6 +407,8 @@ describe('AOS Handlers:', () => {
         });
     
         describe("with multiple controllers", () => {
+          // Approve the addition of new-controller to the Controllers pool
+          // Then create a new proposal to add new-controller2 to the Controllers pool
           before(async () => {
             const result = await handle({
               options: {
@@ -481,6 +483,288 @@ describe('AOS Handlers:', () => {
               controller: 'new-controller2',
               type: "Add-Controller",
             });
+          });
+
+          it('should remove the existing votes of removed controllers', async () => {
+            // Add a third controller so that a single nay won't end a proposal
+            const { memory: rubberStampMemory } = await rubberStampProposal({
+              proposalTags: [
+                { name: 'Action', value: 'Propose' },
+                { name: 'Proposal-Type', value: 'Add-Controller' },
+                { name: 'Controller', value: 'new-controller3' },
+              ],
+              memory: testMemory,
+            });
+
+            // Ensure that there's 3 controllers
+            const controllers = await getControllers(rubberStampMemory);
+            assert.deepEqual(controllers, [PROCESS_OWNER, 'new-controller', 'new-controller3']);
+
+            // Establish a nay vote by new-controller on the new-controller2 proposal
+            const nayVoteResult = await handle({
+              options: {
+                Tags: [
+                  { name: 'Action', value: 'Vote' },
+                  { name: 'Proposal-Number', value: '2' },
+                  { name: 'Vote', value: 'nay' },
+                ],
+                From: "new-controller",
+                Owner: "new-controller",
+              },
+              mem: rubberStampMemory,
+            });
+            assert.deepEqual(JSON.parse(nayVoteResult.Messages[0].Data), {
+              proposalNumber: 2,
+              msgId: STUB_MESSAGE_ID,
+              yays: [],
+              nays: {
+                ['new-controller']: true,
+              },
+              controller: 'new-controller2',
+              type: "Add-Controller",
+            });
+
+            // Assert that the proposal is in memory
+            const proposalsBefore = await getProposals(nayVoteResult.Memory);
+            assert.deepEqual(proposalsBefore, {
+              ['Add-Controller_new-controller2']: {
+                proposalNumber: 2,
+                msgId: STUB_MESSAGE_ID,
+                yays: [],
+                nays: {
+                  ['new-controller']: true,
+                },
+                controller: 'new-controller2',
+                type: "Add-Controller",
+              },
+            });
+
+            // Remove new-controller from the Controllers pool
+            const { memory: removeNewControllerMemory } = await rubberStampProposal({
+              proposalTags: [
+                { name: 'Action', value: 'Propose' },
+                { name: 'Proposal-Type', value: 'Remove-Controller' },
+                { name: 'Controller', value: 'new-controller' },
+              ],
+              memory: nayVoteResult.Memory,
+            });
+
+            // Assert that the new-controller2 proposal now has no votes
+            const proposals = await getProposals(removeNewControllerMemory);
+            assert.deepEqual(proposals, {
+              ['Add-Controller_new-controller2']: {
+                proposalNumber: 2,
+                msgId: STUB_MESSAGE_ID,
+                yays: [],
+                nays: [],
+                controller: 'new-controller2',
+                type: "Add-Controller",
+              },
+            });
+          });
+
+          it("should fail proposals that can no longer pass when their controller's critical yay vote has been removed", async () => {
+            // We'll need 5 Controllers for this test. We already have PROCESS_OWNER and 'new-controller'
+            const { memory: rubberStampMemory } = await rubberStampProposal({
+              proposalTags: [
+                { name: 'Action', value: 'Propose' },
+                { name: 'Proposal-Type', value: 'Add-Controller' },
+                { name: 'Controller', value: 'new-controller3' },
+              ],
+              memory: testMemory,
+            });
+            const { memory: rubberStampMemory2 } = await rubberStampProposal({
+              proposalTags: [
+                { name: 'Action', value: 'Propose' },
+                { name: 'Proposal-Type', value: 'Add-Controller' },
+                { name: 'Controller', value: 'new-controller4' },
+              ],
+              memory: rubberStampMemory,
+            });
+            const { memory: rubberStampMemory3 } = await rubberStampProposal({
+              proposalTags: [
+                { name: 'Action', value: 'Propose' },
+                { name: 'Proposal-Type', value: 'Add-Controller' },
+                { name: 'Controller', value: 'new-controller5' },
+              ],
+              memory: rubberStampMemory2,
+            });
+            const controllersBefore = await getControllers(rubberStampMemory3);
+            assert.deepEqual(controllersBefore, [PROCESS_OWNER, 'new-controller', 'new-controller3', 'new-controller4', 'new-controller5']);
+
+            // Add 2 yays and 2 nays to the new-controller2 proposal
+            const { Memory: yayVote1Memory } = await handle({
+              options: {
+                Tags: [
+                  { name: 'Action', value: 'Vote' },
+                  { name: 'Proposal-Number', value: '2' },
+                  { name: 'Vote', value: 'yay' },
+                ],
+                From: 'new-controller',
+                Owner: 'new-controller',
+              },
+              mem: rubberStampMemory3,
+            });
+            const { Memory: yayVote2Memory } = await handle({
+              options: {
+                Tags: [
+                  { name: 'Action', value: 'Vote' },
+                  { name: 'Proposal-Number', value: '2' },
+                  { name: 'Vote', value: 'yay' },
+                ],
+                From: 'new-controller3',
+                Owner: 'new-controller3',
+              },
+              mem: yayVote1Memory,
+            });
+            const { Memory: nayVote1Memory } = await handle({
+              options: {
+                Tags: [
+                  { name: 'Action', value: 'Vote' },
+                  { name: 'Proposal-Number', value: '2' },
+                  { name: 'Vote', value: 'nay' },
+                ],
+                From: 'new-controller4',
+                Owner: 'new-controller4',
+              },
+              mem: yayVote2Memory,
+            });
+            const { Memory: nayVote2Memory } = await handle({
+              options: {
+                Tags: [
+                  { name: 'Action', value: 'Vote' },
+                  { name: 'Proposal-Number', value: '2' },
+                  { name: 'Vote', value: 'nay' },
+                ],
+                From: 'new-controller5',
+                Owner: 'new-controller5',
+              },
+              mem: nayVote1Memory,
+            });
+
+            // Ensure that proposal 2 has 2 yays and 2 nays
+            const proposals = await getProposals(nayVote2Memory);
+            assert.deepEqual(proposals, {
+              ['Add-Controller_new-controller2']: {
+                proposalNumber: 2,
+                msgId: STUB_MESSAGE_ID,
+                yays: {
+                  ['new-controller']: true,
+                  ['new-controller3']: true,
+                },
+                nays: {
+                  ['new-controller4']: true,
+                  ['new-controller5']: true,
+                },
+                controller: 'new-controller2',
+                type: "Add-Controller",  
+              }
+            })
+
+            // Remove 'new-controller' from the Controllers pool
+            const { memory: removeNewControllerMemory, result: removeNewControllerResult } = await rubberStampProposal({
+              proposalTags: [
+                { name: 'Action', value: 'Propose' },
+                { name: 'Proposal-Type', value: 'Remove-Controller' },
+                { name: 'Controller', value: 'new-controller' },
+              ],
+              memory: nayVote2Memory,
+            });
+
+            const finalMessages = removeNewControllerResult.Messages?.reduce((acc, message) => {
+              if (message.Tags.find(tag => tag.name === 'Action')?.value === 'Proposal-Accepted-Notice') {
+                acc.acceptedNotices.push(message);
+              } else if (message.Tags.find(tag => tag.name === 'Action')?.value === 'Proposal-Rejected-Notice') {
+                acc.rejectedNotices.push(message);
+              }
+              return acc;
+            }, {
+              acceptedNotices: [],
+              rejectedNotices: [],
+            });
+
+            // All the controllers find out that one of them is getting removed
+            assert.deepEqual(finalMessages.acceptedNotices.length, 5);
+
+            // The remaining controllers find out that a proposal has failed now that new-controller's critical yay vote is removed
+            assert.deepEqual(finalMessages.rejectedNotices.length, 4);
+
+            // Assert that 2 events were printed as a result of the chain of events
+            const events = parseEventsFromResult(removeNewControllerResult);
+            assert.deepEqual(events, [
+              {
+                "Yays": [
+                  "1111111111111111111111111111111111111111111",
+                  "new-controller",
+                  "new-controller3"
+                ],
+                "Removed-Yays": [
+                  "2"
+                ],
+                "Proposal-Type": "Remove-Controller",
+                "_e": 1,
+                "Controllers": [
+                  "new-controller4",
+                  "1111111111111111111111111111111111111111111",
+                  "new-controller5",
+                  "new-controller",
+                  "new-controller3"
+                ],
+                "From-Formatted": "new-controller3",
+                "Fail-Threshold": 3,
+                "Removed-Yays-Count": 1,
+                "Vote": "yay",
+                "Nays-Count": 0,
+                "Timestamp": 21600000,
+                "Action": "Vote",
+                "Nays": [],
+                "Proposal-Name": "Remove-Controller_new-controller",
+                "Proposal-Number": 6,
+                "Pass-Threshold": 3,
+                "Message-Id": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",
+                "Controller": "new-controller",
+                "Yays-Count": 3,
+                "Proposal-Status": "Passed",
+                "From": "new-controller3",
+                "Controllers-Count": 5
+              },
+              {
+                "Yays": [
+                  "new-controller3"
+                ],
+                "Proposal-Type": "Add-Controller",
+                "_e": 1,
+                "Controllers": [
+                  "new-controller4",
+                  "1111111111111111111111111111111111111111111",
+                  "new-controller5",
+                  "new-controller3"
+                ],
+                "From-Formatted": "new-controller3",
+                "Fail-Threshold": 2,
+                "Vote": "yay",
+                "Nays-Count": 2,
+                "Timestamp": 21600000,
+                "Action": "Vote",
+                "Nays": [
+                  "new-controller4",
+                  "new-controller5"
+                ],
+                "Proposal-Name": "Add-Controller_new-controller2",
+                "Proposal-Number": 2,
+                "Pass-Threshold": 3,
+                "Message-Id": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",
+                "Controller": "new-controller2",
+                "Yays-Count": 1,
+                "Proposal-Status": "Failed",
+                "From": "new-controller3",
+                "Controllers-Count": 4
+              }
+            ]);
+
+            // Assert that the proposal 2 has been removed due to now-insufficient available yay votes
+            const proposalsAfter = await getProposals(removeNewControllerMemory);
+            assert.deepEqual(proposalsAfter, {});
           });
         });
     
