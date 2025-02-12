@@ -3,6 +3,8 @@ local utils = require("utils")
 
 Owner = Owner or ao.env.Process.Owner
 
+MaxProposalsPerController = MaxProposalsPerController or 10
+
 --- @alias WalletAddress string
 --- @alias ProcessId string
 --- @alias MessageId string
@@ -22,6 +24,7 @@ Controllers = Controllers or {
 --- @field type "Add-Controller"|"Remove-Controller"|"Transfer-Process"|"Eval"
 --- @field yays table<WalletAddress, any> # a lookup table of WalletAddresses that have voted yay. Values irrelevant.
 --- @field nays table<WalletAddress, any> # a lookup table of WalletAddresses that have voted nay. Values irrelevant.
+--- @field proposer WalletAddress
 
 --- @class ControllerProposalData : ProposalData
 --- @field controller WalletAddress
@@ -45,6 +48,16 @@ local SupportedProposalTypes = {
 ProposalNumber = ProposalNumber or 0
 --- @type table<ProposalName, ProposalDataType>
 Proposals = Proposals or {}
+
+function controllerProposalCount(controller)
+	local count = 0
+	for _, proposal in pairs(Proposals) do
+		if proposal.proposer == controller then
+			count = count + 1
+		end
+	end
+	return count
+end
 
 --- @alias Timestamp number
 
@@ -337,6 +350,10 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 		vote = type(vote) == "string" and string.lower(vote) or "error"
 		assert(vote == "yay" or vote == "nay", "Vote, if provided, must be 'yay' or 'nay'")
 	end
+	assert(
+		controllerProposalCount(msg.From) < MaxProposalsPerController,
+		"Controller has the maximum number of proposals (" .. MaxProposalsPerController .. ") active"
+	)
 
 	local proposalName
 	--- @type ControllerProposalData|EvalProposalData|nil
@@ -362,6 +379,7 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 			controller = msg.Tags.Controller,
 			yays = {},
 			nays = {},
+			proposer = msg.From,
 		}
 	elseif msg.Tags["Proposal-Type"] == "Eval" then
 		local processId = msg.Tags["Process-Id"]

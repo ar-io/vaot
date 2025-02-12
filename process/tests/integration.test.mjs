@@ -122,6 +122,7 @@ describe('AOS Handlers:', () => {
               nays: [],
               controller,
               type: proposalType,
+              proposer: PROCESS_OWNER,
             },
             false,
           );
@@ -149,6 +150,7 @@ describe('AOS Handlers:', () => {
               nays: [],
               controller,
               type: proposalType,
+              proposer: PROCESS_OWNER,
             }
           );
     
@@ -184,6 +186,7 @@ describe('AOS Handlers:', () => {
               },
               controller,
               type: proposalType,
+              proposer: PROCESS_OWNER,
             }
           );
     
@@ -367,6 +370,7 @@ describe('AOS Handlers:', () => {
             nays: [],
             controller: 'new-controller',
             type: "Add-Controller",
+            proposer: PROCESS_OWNER,
           });
     
           // Ensure that the vote is now over
@@ -399,6 +403,7 @@ describe('AOS Handlers:', () => {
             },
             controller: 'new-controller',
             type: "Add-Controller",
+            proposer: PROCESS_OWNER,
           });
     
           // Ensure that the vote is now over
@@ -459,6 +464,7 @@ describe('AOS Handlers:', () => {
               nays: [],
               controller: 'new-controller2',
               type: "Add-Controller",
+              proposer: PROCESS_OWNER,
             });
           });
 
@@ -482,6 +488,7 @@ describe('AOS Handlers:', () => {
               },
               controller: 'new-controller2',
               type: "Add-Controller",
+              proposer: PROCESS_OWNER,
             });
           });
 
@@ -522,6 +529,7 @@ describe('AOS Handlers:', () => {
               },
               controller: 'new-controller2',
               type: "Add-Controller",
+              proposer: PROCESS_OWNER,
             });
 
             // Assert that the proposal is in memory
@@ -536,6 +544,7 @@ describe('AOS Handlers:', () => {
                 },
                 controller: 'new-controller2',
                 type: "Add-Controller",
+                proposer: PROCESS_OWNER,
               },
             });
 
@@ -559,6 +568,7 @@ describe('AOS Handlers:', () => {
                 nays: [],
                 controller: 'new-controller2',
                 type: "Add-Controller",
+                proposer: PROCESS_OWNER,
               },
             });
           });
@@ -658,6 +668,7 @@ describe('AOS Handlers:', () => {
                 },
                 controller: 'new-controller2',
                 type: "Add-Controller",  
+                proposer: PROCESS_OWNER,
               }
             })
 
@@ -829,6 +840,7 @@ describe('AOS Handlers:', () => {
                 nays: [],
                 controller: 'new-controller2',
                 type: "Add-Controller",
+                proposer: PROCESS_OWNER,
               },
             });
 
@@ -963,6 +975,7 @@ describe('AOS Handlers:', () => {
             nays: [],
             controller: 'new-controller2',
             type: "Add-Controller",
+            proposer: PROCESS_OWNER,
           });
     
           // Ensure the proposal is now completed
@@ -996,6 +1009,7 @@ describe('AOS Handlers:', () => {
             },
             controller: 'new-controller2',
             type: "Add-Controller",
+            proposer: PROCESS_OWNER,
           });
     
           // Ensure the proposal is now completed
@@ -1136,6 +1150,39 @@ describe('AOS Handlers:', () => {
         assert.deepEqual(evalMessage.Data, 'print("Hello, World!")');
         // TODO: More thorough testing here
       });
+    });
+
+    it('should not allow a controller to exceed the maximum number of proposals', async () => {
+      const proposals = await getProposals(testMemory);
+      let memory = testMemory;
+      for (let i = Object.keys(proposals).length; i < 10; i++) {
+        const result = await handle({
+          options: {
+            Tags: [
+              { name: 'Action', value: 'Propose' },
+              { name: 'Proposal-Type', value: 'Add-Controller' },
+              { name: 'Controller', value: `new-controller-${i}` },
+            ],
+          },
+          mem: memory,
+        });
+        assert.deepEqual(result.Error, undefined);
+        memory = result.Memory;
+      }
+
+      assert.deepEqual(Object.keys(await getProposals(memory)).length, 10);
+
+      const result = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Propose' },
+            { name: 'Proposal-Type', value: 'Add-Controller' },
+            { name: 'Controller', value: 'new-controller-10' },
+          ],
+        },
+        mem: memory,
+      });
+      assert(result.Messages[0].Data?.includes("Controller has the maximum number of proposals (10) active"));
     });
   });
 });
