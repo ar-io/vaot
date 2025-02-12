@@ -1185,4 +1185,100 @@ describe('AOS Handlers:', () => {
       assert(result.Messages[0].Data?.includes("Controller has the maximum number of proposals (10) active"));
     });
   });
+
+  describe("Revoke-Proposal", () => {
+    let testProposalNumber;
+    let revokeTestMemory;
+    // Two controllers and one outstanding proposal
+    before(async () => {
+      const { memory: rubberStampMemory } = await rubberStampProposal({
+        proposalTags: [
+          { name: 'Action', value: 'Propose' },
+          { name: 'Proposal-Type', value: 'Add-Controller' },
+          { name: 'Controller', value: 'new-controller' },
+        ],
+        memory: testMemory,
+      });
+      const proposeResult = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Propose' },
+            { name: 'Proposal-Type', value: 'Add-Controller' },
+            { name: 'Controller', value: 'new-controller2' },
+          ],
+          From: 'new-controller',
+          Owner: 'new-controller',
+        },
+        mem: rubberStampMemory,
+      });
+      revokeTestMemory = proposeResult.Memory;
+      testProposalNumber = `${JSON.parse(proposeResult.Messages[0]?.Data)?.proposalNumber}`;
+    });
+
+    it('should not allow a controller to revoke a proposal that is not theirs', async () => {
+      const result = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Revoke-Proposal' },
+            { name: 'Proposal-Number', value: testProposalNumber },
+          ],
+        },
+        mem: revokeTestMemory,
+      });
+      assert(result.Messages[0].Data?.includes("Proposal was not proposed by the sender"));
+    });
+
+    it('should not allow a non-controller to revoke a proposal', async () => {
+      const result = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Revoke-Proposal' },
+            { name: 'Proposal-Number', value: testProposalNumber },
+          ],
+          From: 'new-controller2',
+          Owner: 'new-controller2',
+        },
+        mem: revokeTestMemory,
+      });
+      assert(result.Messages[0].Data?.includes("Sender is not a registered Controller!"));
+    });
+
+    it('should not allow a revoked controller to revoke a proposal', async () => {
+      const { memory: rubberStampMemory } = await rubberStampProposal({
+        proposalTags: [
+          { name: 'Action', value: 'Propose' },
+          { name: 'Proposal-Type', value: 'Remove-Controller' },
+          { name: 'Controller', value: 'new-controller' },
+        ],
+        memory: revokeTestMemory,
+      });
+      const result = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Revoke-Proposal' },
+            { name: 'Proposal-Number', value: testProposalNumber },
+          ],
+          From: 'new-controller',
+          Owner: 'new-controller',
+        },
+        mem: rubberStampMemory,
+      });
+      assert(result.Messages[0].Data?.includes("Sender is not a registered Controller!"));
+    });
+
+    it('should successfully revoke a proposal', async () => {
+      const result = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Revoke-Proposal' },
+            { name: 'Proposal-Number', value: testProposalNumber },
+          ],
+          From: 'new-controller',
+          Owner: 'new-controller',
+        },
+        mem: revokeTestMemory,
+      });
+      assert.deepEqual(result.Messages[0]?.Tags?.find(tag => tag.name === 'Action')?.value, "Revoke-Proposal-Notice");
+    });
+  });
 });

@@ -300,6 +300,7 @@ function handleMaybeVoteQuorum(proposalName, msg, aoEvent)
 		elseif proposal.type == "Remove-Controller" then
 			Controllers[proposal.controller] = nil
 			removeVotesForController(proposal.controller, { proposalName }, aoEvent)
+			-- TODO: Should we also revoke their outstanding proposals?
 			-- Side effect: removed controller will not know the outcome of these proposals
 			reassessQuorumOnAllProposals(msg, { proposalName })
 		elseif proposal.type == "Eval" then
@@ -449,6 +450,26 @@ addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), func
 	})
 
 	handleMaybeVoteQuorum(proposalName, msg)
+end)
+
+addEventingHandler("revoke", Handlers.utils.hasMatchingTag("Action", "Revoke-Proposal"), function(msg)
+	assert(Controllers[msg.From], "Sender is not a registered Controller!")
+	assert(msg.Tags["Proposal-Number"], "Proposal-Number is required")
+	local proposalName, proposal = utils.findInTable(Proposals, function(_, prop)
+		return prop.proposalNumber == msg.Tags["Proposal-Number"]
+	end)
+	assert(proposal, "Proposal does not exist")
+	assert(proposal.proposer == msg.From, "Proposal was not proposed by the sender")
+
+	Proposals[proposalName] = nil
+
+	for controller, _ in pairs(Controllers) do
+		Send(msg, {
+			Target = controller,
+			Action = "Revoke-Proposal-Notice",
+			Data = proposal,
+		})
+	end
 end)
 
 addEventingHandler("controllers", Handlers.utils.hasMatchingTag("Action", "Get-Controllers"), function(msg)
