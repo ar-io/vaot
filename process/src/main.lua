@@ -416,11 +416,14 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 	--- @diagnostic disable-next-line: inject-field
 	returnData.proposalName = proposalName
 
-	Send(msg, {
-		Target = msg.From,
-		Action = "Propose-" .. msg.Tags["Proposal-Type"] .. "-Notice",
-		Data = returnData,
-	})
+	-- Notify all the controllers that a proposal has been proposed
+	for controller, _ in pairs(Controllers) do
+		Send(msg, {
+			Target = controller,
+			Action = "Propose-" .. msg.Tags["Proposal-Type"] .. "-Notice",
+			Data = returnData,
+		})
+	end
 
 	handleMaybeVoteQuorum(proposalName, msg)
 end)
