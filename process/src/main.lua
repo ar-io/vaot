@@ -3,6 +3,8 @@ local utils = require("utils")
 
 Owner = Owner or ao.env.Process.Owner
 
+MaxProposalsPerController = MaxProposalsPerController or 10
+
 --- @alias WalletAddress string
 --- @alias ProcessId string
 --- @alias MessageId string
@@ -22,6 +24,7 @@ Controllers = Controllers or {
 --- @field type "Add-Controller"|"Remove-Controller"|"Transfer-Process"|"Eval"
 --- @field yays table<WalletAddress, any> # a lookup table of WalletAddresses that have voted yay. Values irrelevant.
 --- @field nays table<WalletAddress, any> # a lookup table of WalletAddresses that have voted nay. Values irrelevant.
+--- @field proposer WalletAddress
 
 --- @class ControllerProposalData : ProposalData
 --- @field controller WalletAddress
@@ -45,6 +48,16 @@ local SupportedProposalTypes = {
 ProposalNumber = ProposalNumber or 0
 --- @type table<ProposalName, ProposalDataType>
 Proposals = Proposals or {}
+
+function controllerProposalCount(controller)
+	local count = 0
+	for _, proposal in pairs(Proposals) do
+		if proposal.proposer == controller then
+			count = count + 1
+		end
+	end
+	return count
+end
 
 --- @alias Timestamp number
 
@@ -287,6 +300,7 @@ function handleMaybeVoteQuorum(proposalName, msg, aoEvent)
 		elseif proposal.type == "Remove-Controller" then
 			Controllers[proposal.controller] = nil
 			removeVotesForController(proposal.controller, { proposalName }, aoEvent)
+			-- TODO: Should we also revoke their outstanding proposals?
 			-- Side effect: removed controller will not know the outcome of these proposals
 			reassessQuorumOnAllProposals(msg, { proposalName })
 		elseif proposal.type == "Eval" then
@@ -337,6 +351,10 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 		vote = type(vote) == "string" and string.lower(vote) or "error"
 		assert(vote == "yay" or vote == "nay", "Vote, if provided, must be 'yay' or 'nay'")
 	end
+	assert(
+		controllerProposalCount(msg.From) < MaxProposalsPerController,
+		"Controller has the maximum number of proposals (" .. MaxProposalsPerController .. ") active"
+	)
 
 	local proposalName
 	--- @type ControllerProposalData|EvalProposalData|nil
@@ -362,6 +380,7 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 			controller = msg.Tags.Controller,
 			yays = {},
 			nays = {},
+			proposer = msg.From,
 		}
 	elseif msg.Tags["Proposal-Type"] == "Eval" then
 		local processId = msg.Tags["Process-Id"]
@@ -397,11 +416,14 @@ addEventingHandler("propose", Handlers.utils.hasMatchingTag("Action", "Propose")
 	--- @diagnostic disable-next-line: inject-field
 	returnData.proposalName = proposalName
 
-	Send(msg, {
-		Target = msg.From,
-		Action = "Propose-" .. msg.Tags["Proposal-Type"] .. "-Notice",
-		Data = returnData,
-	})
+	-- Notify all the controllers that a proposal has been proposed
+	for controller, _ in pairs(Controllers) do
+		Send(msg, {
+			Target = controller,
+			Action = "Propose-" .. msg.Tags["Proposal-Type"] .. "-Notice",
+			Data = returnData,
+		})
+	end
 
 	handleMaybeVoteQuorum(proposalName, msg)
 end)
@@ -431,6 +453,26 @@ addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), func
 	})
 
 	handleMaybeVoteQuorum(proposalName, msg)
+end)
+
+addEventingHandler("revoke", Handlers.utils.hasMatchingTag("Action", "Revoke-Proposal"), function(msg)
+	assert(Controllers[msg.From], "Sender is not a registered Controller!")
+	assert(msg.Tags["Proposal-Number"], "Proposal-Number is required")
+	local proposalName, proposal = utils.findInTable(Proposals, function(_, prop)
+		return prop.proposalNumber == msg.Tags["Proposal-Number"]
+	end)
+	assert(proposal, "Proposal does not exist")
+	assert(proposal.proposer == msg.From, "Proposal was not proposed by the sender")
+
+	Proposals[proposalName] = nil
+
+	for controller, _ in pairs(Controllers) do
+		Send(msg, {
+			Target = controller,
+			Action = "Revoke-Proposal-Notice",
+			Data = proposal,
+		})
+	end
 end)
 
 addEventingHandler("controllers", Handlers.utils.hasMatchingTag("Action", "Get-Controllers"), function(msg)
