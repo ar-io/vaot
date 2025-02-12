@@ -96,6 +96,7 @@ export async function rubberStampProposal({
 }){
   const controllers = await getControllers(memory);
   const passThreshold = Math.floor(controllers.length / 2) + 1;
+  let finalResult;
   const proposeResult = await handle({
     options: {
       Tags: [
@@ -107,6 +108,7 @@ export async function rubberStampProposal({
     },
     mem: memory,
   });
+  finalResult = proposeResult;
   const proposalNumber = JSON.parse(proposeResult.Messages[0].Data).proposalNumber;
   let workingMemory = proposeResult.Memory;
   for (const controller of controllers.slice(1, passThreshold)) {
@@ -122,6 +124,7 @@ export async function rubberStampProposal({
       },
       mem: workingMemory,
     });
+    finalResult = voteResult;
     workingMemory = voteResult.Memory;
   }
   const proposals = await getProposals(workingMemory);
@@ -129,6 +132,26 @@ export async function rubberStampProposal({
   assert(!maybeProposal, "Proposal not successfully rubber stamped!");
   return {
     memory: workingMemory,
-    proposalNumber
+    proposalNumber,
+    result: finalResult,
   };
+}
+
+// NOTE: Presumes that input array ordering is not precious
+export function normalizeObject(obj) {
+  if (Array.isArray(obj)) {
+    // Recursively normalize array elements and sort the array
+    return obj.map(normalizeObject).sort();
+  } else if (obj !== null && typeof obj === "object") {
+    // Get keys in alphabetical order
+    const sortedKeys = Object.keys(obj).sort();
+    
+    // Create a new object with sorted keys
+    const normalized = {};
+    for (const key of sortedKeys) {
+      normalized[key] = normalizeObject(obj[key]); // Recursively normalize values
+    }
+    return normalized;
+  }
+  return obj; // Return primitives as-is
 }

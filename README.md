@@ -2,11 +2,18 @@
 
 ![image](https://github.com/user-attachments/assets/f89c8c96-911c-4cfc-8ba9-f63502690553)
 
-Propse and vAOt to:
+Propose and vAOt to:
 
 - add other wallet addresses, known as Controllers, that will have the right to propose votes and vote on proposals
 - remove existing controllers
-- have the process send an `Eval` message to another AO process (think: multi-sig-like, remote process control)
+- have the process send an `Eval` message to another AO process (think: multi-sig-like, remote process control) or to itself (e.g. for controllers-sanctioned upgrades or customization of the process)
+
+Suggested workflow for controlling processes with multi-sig-like protections:
+
+1. Instantiate a vAOt process. The process creator will be the initial `Owner` of the vAOt process as well as the first Controller.
+2. Assign ownership of the vAOt process to either: a) the process itself if you want Controllers to manage upgrades or Ownership or state changes of the vAOt process or b) nil if you want the vAOt process to remain unowned
+3. Add other Controllers via proposal and voting workflows.
+4. Assign the `Owner` of a target process that you'd like to manage via vAOt to the vAOt process. The Controllers can now collectively manage the target process via proposal and voting workflows.
 
 ## Handlers
 
@@ -23,7 +30,7 @@ Required:
 }
 ```
 
-Required for Add/Remove-Controller Proposal-Type:
+Required for Add/Remove-Controller `Proposal-Type`:
 
 ```json
 {
@@ -31,16 +38,23 @@ Required for Add/Remove-Controller Proposal-Type:
 }
 ```
 
-Required for Eval Proposal Type:
+Required for Eval `Proposal-Type`:
+
+Tags:
 
 ```json
 {
-  "Process-Id": "<AO Process ID to target for Eval>",
-  "Data": "<Eval string to send to target Process-Id>"
+  "Process-Id": "<AO Process ID to target for Eval>"
 }
 ```
 
-Optional for all Proposal-Types:
+Data:
+
+```text
+<Eval string to send to target Process-Id>
+```
+
+Optional for all `Proposal-Type`s:
 
 ```json
 {
@@ -57,6 +71,8 @@ Any current Controller can cast a vote on an In-Progress Proposal. Proposals are
 
 If the deciding vote Passes the proposal, the proposal is immediately implemented.
 
+If the outcome of a proposal is to remove a Controller, that Controller's existing votes on In-Progress proposals are revoked. In-Progress proposals are then re-evaluated for quorum immediately and may or may not reach a passable or failed outcome at that time. Proposal re-evaluation is handled in `Proposal-Number` order, i.e. the order in which proposals were created.
+
 Required:
 
 ```json
@@ -64,6 +80,19 @@ Required:
   "Action": "Vote",
   "Proposal-Id": "<Proposal ID string>"
   "Vote": "yay" or "nay"
+}
+```
+
+### Action: Revoke-Proposal
+
+Allows the Controller that proposed a proposal to revoke it before it is finalized.
+
+Required:
+
+```json
+{
+  "Action": "Revoke-Proposal",
+  "Proposal-Number": "<Proposal-Number string>"
 }
 ```
 
