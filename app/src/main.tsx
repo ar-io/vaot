@@ -1,5 +1,5 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
 import {
@@ -18,26 +18,28 @@ export const queryClient = new QueryClient({
   },
 });
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <AOWalletKit
-      config={{
-        permissions: [
-          'SIGN_TRANSACTION',
-          'ACCESS_ADDRESS',
-          'ACCESS_ALL_ADDRESSES',
-          'ACCESS_PUBLIC_KEY',
-        ],
-      }}
-      strategies={[
-        new ArConnectStrategy(),
-        new ArweaveWebWalletStrategy(),
-        ethereumStrategy,
-      ]}
-    >
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
-    </AOWalletKit>
-  </StrictMode>,
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  (
+    <React.StrictMode>
+      <AOWalletKit
+        config={{
+          permissions: [
+            'SIGN_TRANSACTION',
+            'ACCESS_ADDRESS',
+            'ACCESS_ALL_ADDRESSES',
+            'ACCESS_PUBLIC_KEY',
+          ],
+        }}
+        strategies={[
+          new ArConnectStrategy(),
+          new ArweaveWebWalletStrategy(),
+          ethereumStrategy,
+        ]}
+      >
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </AOWalletKit>
+    </React.StrictMode>
+  ) as any,
 );

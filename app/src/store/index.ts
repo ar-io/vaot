@@ -60,6 +60,6 @@ export const useGlobalState = create<GlobalStateInterface>()(
   (set, get) =>
     ({
       ...initialGlobalState,
-      ...new GlobalStateActionBase(set, get, initialGlobalState),
+      ...new GlobalStateActionBase(set as any, get, initialGlobalState),
     }) as any,
 );
