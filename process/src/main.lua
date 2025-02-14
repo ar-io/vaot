@@ -163,6 +163,15 @@ local function assertAndSanitizeInputs(msg)
 	msg.Tags = utils.validateAndSanitizeInputs(msg.Tags)
 	msg.From = utils.formatAddress(msg.From)
 	msg.Timestamp = msg.Timestamp and tonumber(msg.Timestamp) -- Timestamp should always be provided by the CU
+
+	if
+		msg.Tags.Action ~= "Eval" -- Evals can only be handled by the Owner who has the broadest powers
+		and msg.Data -- If data is present, we want to make sure it's not too large
+		and msg.From ~= Owner -- Give the Owner broader powers in non-Eval cases
+		and not Controllers[msg.From] -- Controller needs to be able to submit large Eval proposals
+	then
+		assert(#msg.Data <= 100, "Data size is too large")
+	end
 end
 
 addEventingHandler("sanitize", function()
