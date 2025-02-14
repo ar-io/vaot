@@ -34,6 +34,69 @@ describe('AOS Handlers:', () => {
     assert.deepStrictEqual(await getProposals(testMemory), {});
   });
 
+  describe("sanitization handler", () => {
+    it("should not allow non-Eval messages with large Data from non-controllers or non-owner", async () => {
+      const result = await handle({
+        options: {
+          Tags: [{ name: 'Action', value: 'Foo' }],
+          Data: "a".repeat(101),
+          From: 'rando',
+          Owner: 'rando',
+        },
+        mem: testMemory,
+      });
+      assert(result.Error.includes("Data size is too large"));
+    });
+
+    it("should allow non-Eval messages with large Data from Controllers", async () => {
+      const { memory: rubberStampMemory } = await rubberStampProposal({
+        proposalTags: [
+          { name: 'Action', value: 'Propose' },
+          { name: 'Proposal-Type', value: 'Add-Controller' },
+          { name: 'Controller', value: 'new-controller' },
+        ],
+        memory: testMemory,
+      });
+      const proposeResult = await handle({
+        options: {
+          Tags: [
+            { name: 'Action', value: 'Propose' },
+            { name: 'Proposal-Type', value: 'Add-Controller' },
+            { name: 'Controller', value: 'new-controller2' },
+          ],
+          Data: "a".repeat(101),
+          From: 'new-controller',
+          Owner: 'new-controller',
+        },
+        mem: rubberStampMemory,
+      });
+      assert(!proposeResult.Error);
+
+      const fooResult = await handle({
+        options: {
+          Tags: [{ name: 'Action', value: 'Foo' }],
+          Data: "a".repeat(101),
+          From: 'new-controller',
+          Owner: 'new-controller',
+        },
+        mem: rubberStampMemory,
+      });
+      assert(!fooResult.Error);
+    });
+
+    it("should allow Eval messages with large Data from the Owner", async () => {
+      const result = await handle({
+        options: {
+          Tags: [{ name: 'Action', value: 'Eval' }],
+          Data: "a".repeat(101),
+          From: PROCESS_OWNER,
+          Owner: PROCESS_OWNER,
+        },
+      });
+      assert(!result.Error);
+    });
+  });
+
   describe("'Propose' Handler", () => {
     const controllerProposalTypes = [
       "Add-Controller",
