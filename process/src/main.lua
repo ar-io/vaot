@@ -147,6 +147,31 @@ end
 -- handlers that are critical should raise unhandled errors so the CU will discard the memory on error
 local CRITICAL = true
 
+--- @param value any
+--- @param remainingBytes number
+--- @param tablesSeen table<table, any>|nil
+local function assertValueBytesLowerThan(value, remainingBytes, tablesSeen)
+	tablesSeen = tablesSeen or {}
+
+	local t = type(value)
+	if t == "string" then
+		remainingBytes = remainingBytes - #value
+	elseif t == "number" or t == "boolean" then
+		remainingBytes = remainingBytes - 8 -- Approximate size for numbers/booleans
+	elseif t == "table" and not tablesSeen[value] then
+		tablesSeen[value] = true
+		for k, v in pairs(value) do
+			remainingBytes = assertValueBytesLowerThan(k, remainingBytes, tablesSeen)
+			remainingBytes = assertValueBytesLowerThan(v, remainingBytes, tablesSeen)
+		end
+	end
+
+	if remainingBytes <= 0 then
+		error("Data size is too large")
+	end
+	return remainingBytes
+end
+
 -- Sanitize inputs before every interaction
 local function assertAndSanitizeInputs(msg)
 	assert(
@@ -170,7 +195,7 @@ local function assertAndSanitizeInputs(msg)
 		and msg.From ~= Owner -- Give the Owner broader powers in non-Eval cases
 		and not Controllers[msg.From] -- Controller needs to be able to submit large Eval proposals
 	then
-		assert(#msg.Data <= 100, "Data size is too large")
+		assert(assertValueBytesLowerThan(msg.Data, 100), "Data size is too large")
 	end
 end
 
