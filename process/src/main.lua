@@ -195,7 +195,7 @@ local function assertAndSanitizeInputs(msg)
 		and msg.From ~= Owner -- Give the Owner broader powers in non-Eval cases
 		and not Controllers[msg.From] -- Controller needs to be able to submit large Eval proposals
 	then
-		assert(assertValueBytesLowerThan(msg.Data, 100), "Data size is too large")
+		assertValueBytesLowerThan(msg.Data, 100)
 	end
 end
 
