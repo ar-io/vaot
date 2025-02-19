@@ -36,6 +36,8 @@ function CreateProposalModal({
     processId: '',
   });
 
+  console.log(proposalParams);
+
   async function confirmProposal() {
     try {
       if (vaot instanceof VAOTWriteable) {

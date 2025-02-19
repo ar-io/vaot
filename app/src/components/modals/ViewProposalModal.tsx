@@ -32,6 +32,8 @@ function ViewProposalModal({
 
   const [vote, setVote] = useState<'yay' | 'nay'>('nay');
 
+  console.log('vote', vote);
+
   async function confirmVote() {
     try {
       if (vaot instanceof VAOTWriteable && proposal) {

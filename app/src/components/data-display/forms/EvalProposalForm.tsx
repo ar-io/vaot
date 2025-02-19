@@ -58,7 +58,7 @@ function EvalProposalForm({
           className="flex gap-4 w-fit my-4"
           value={proposalParams.vote}
           onChange={(v) => setProposalParams({ ...proposalParams, vote: v })}
-          defaultValue={'yay'}
+          defaultValue={'nay'}
           indicatorClass={`
                   relative flex size-full items-center justify-center rounded-full border border-white bg-foreground 
                   after:block data-[state=checked]:after:size-[16px] data-[state=unchecked]:after:size-[0px] after:rounded-full data-[state=checked]:after:bg-white
