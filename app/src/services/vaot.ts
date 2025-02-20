@@ -23,7 +23,7 @@ export const VAOTHandlerTypes = [
 ] as const;
 export type VAOTHandler = (typeof VAOTHandlerTypes)[number];
 
-export type VAOTVote = 'yay' | 'nay';
+export type VAOTVote = 'yay' | 'nay' | undefined;
 
 export const VAOTProposalTypes = [
   'Add-Controller',

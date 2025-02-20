@@ -58,7 +58,7 @@ function EvalProposalForm({
           className="flex gap-4 w-fit my-4"
           value={proposalParams.vote}
           onChange={(v) => setProposalParams({ ...proposalParams, vote: v })}
-          defaultValue={'nay'}
+          defaultValue={proposalId ? 'nay' : 'none'}
           indicatorClass={`
                   relative flex size-full items-center justify-center rounded-full border border-white bg-foreground 
                   after:block data-[state=checked]:after:size-[16px] data-[state=unchecked]:after:size-[0px] after:rounded-full data-[state=checked]:after:bg-white
@@ -94,7 +94,25 @@ function EvalProposalForm({
               className:
                 'size-[25px] cursor-pointer rounded-full border border-white shadow-[0_2px_10px] shadow-black outline-none hover:bg-white focus:shadow-[0_0_0_2px] focus:shadow-black transition-all',
             },
-          ]}
+            {
+              label: (
+                <label
+                  htmlFor="r0"
+                  className={`pl-[15px] text-[15px] leading-none ${
+                    proposalParams.vote === 'Nay' ? 'text-white' : 'text-grey'
+                  } whitespace-nowrap cursor-pointer hover:text-white`}
+                >
+                  No Vote
+                </label>
+              ),
+              value: 'none',
+              className:
+                'size-[25px] cursor-pointer rounded-full border border-white shadow-[0_2px_10px] shadow-black outline-none hover:bg-white focus:shadow-[0_0_0_2px] focus:shadow-black transition-all',
+            },
+          ].filter((item) => {
+            if (proposalId) return item.value !== 'none';
+            else return true;
+          })}
         />
         <ProcessInfoCard
           processId={

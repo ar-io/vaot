@@ -25,21 +25,21 @@ export const WRITE_OPTIONS = {
 
 export const PROPOSAL_TYPE_PARAM_DEFAULTS: Record<
   VAOTProposalType,
-  Record<string, string>
+  Record<string, string | undefined>
 > = {
   'Add-Controller': {
     type: 'Add-Controller',
     controller: '',
-    vote: 'yay',
+    vote: undefined,
   },
   'Remove-Controller': {
     type: 'Remove-Controller',
     controller: '',
-    vote: 'yay',
+    vote: undefined,
   },
   Eval: {
     type: 'Eval',
-    vote: 'yay',
+    vote: undefined,
     evalStr: '',
     processId: '',
   },

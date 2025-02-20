@@ -31,17 +31,21 @@ function CreateProposalModal({
     Parameters<VAOTWriteable['propose']>[0]
   >({
     type: 'Eval',
-    vote: 'yay',
+    vote: undefined,
     evalStr: '',
     processId: '',
   });
 
-  console.log(proposalParams);
-
   async function confirmProposal() {
     try {
       if (vaot instanceof VAOTWriteable) {
-        const res = await vaot.propose(proposalParams);
+        const res = await vaot.propose({
+          ...proposalParams,
+          vote:
+            proposalParams.vote === 'yay' || proposalParams.vote === 'nay'
+              ? proposalParams.vote
+              : undefined,
+        });
 
         showTransactionSuccessToast(
           `${proposalParams.type.replace('-', ' ')} Proposal`,
@@ -79,7 +83,7 @@ function CreateProposalModal({
                 onClick={() =>
                   setProposalParams(PROPOSAL_TYPE_PARAM_DEFAULTS[type] as any)
                 }
-                className="flex p-2 border border-stone-500 bg-stone-900 rounded whitespace-nowrap"
+                className={`${proposalParams.type === type ? 'bg-white text-black' : ''} flex p-2 border border-stone-500 hover:border-emerald-600 hover:scale-105 bg-stone-900 transition-all rounded whitespace-nowrap`}
               >
                 {type.replace('-', ' ')}
               </button>

@@ -73,14 +73,17 @@ function VAOTControllersTable({ vaotId }: { vaotId?: string }) {
         switch (key) {
           case 'controller': {
             return (
-              <Link
-                to={`https://ao.link/#/entity/${rowValue}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-emerald-500"
-              >
-                {formatForMaxCharCount(rowValue, 8)}
-              </Link>
+              <div className="flex gap-3 items-center justify-start">
+                <Link
+                  to={`https://ao.link/#/entity/${rowValue}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-emerald-500"
+                >
+                  {formatForMaxCharCount(rowValue, 8)}
+                </Link>
+                <CopyButton textToCopy={rowValue} />
+              </div>
             );
           }
           case 'proposalCount': {
