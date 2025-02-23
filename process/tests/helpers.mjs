@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import {
-  AOS_WASM,
+  VAOT_WASM,
   AO_LOADER_HANDLER_ENV,
   AO_LOADER_OPTIONS,
   DEFAULT_HANDLE_OPTIONS,
@@ -13,7 +13,7 @@ import AoLoader from '@permaweb/ao-loader';
  * @returns {Promise<{handle: Function, memory: WebAssembly.Memory}>}
  */
 export async function createAosLoader() {
-  const handle = await AoLoader(AOS_WASM, AO_LOADER_OPTIONS);
+  const handle = await AoLoader(VAOT_WASM, AO_LOADER_OPTIONS);
   const evalRes = await handle(
     null,
     {

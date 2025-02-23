@@ -27,11 +27,15 @@ export const AO_LOADER_HANDLER_ENV = {
   },
 };
 
+export const VAOT_WASM = fs.readFileSync(
+  path.join(__dirname, '../dist/aos-vaot.wasm'), // MUST load as binary (note no utf-8 flag)
+);
+
 export const AO_LOADER_OPTIONS = {
-  format: 'wasm64-unknown-emscripten-draft_2024_02_15',
+  format: 'wasm32-unknown-emscripten-metering',
   inputEncoding: 'JSON-1',
   outputEncoding: 'JSON-1',
-  memoryLimit: '1073741824', // in bytes (1GiB)
+  memoryLimit: '1073741824', // 1 GiB in bytes
   computeLimit: (9e12).toString(),
   extensions: [],
 };
@@ -51,7 +55,7 @@ export const BUNDLED_SOURCE_CODE = fs.readFileSync(
 export const DEFAULT_HANDLE_OPTIONS = {
   Id: STUB_MESSAGE_ID,
   Target: PROCESS_ID,
-  Module: 'ANT',
+  Module: 'vAOt',
   ['Block-Height']: '1',
   // important to set the address to match the FROM address so that that `Authority` check passes. Else the `isTrusted` with throw an error.
   Owner: PROCESS_OWNER,

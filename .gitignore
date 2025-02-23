@@ -13,3 +13,5 @@ luacov-html
 dist
 luacov.stats.out
 coverage
+aos-process
+build
