@@ -534,6 +534,13 @@ function utils.getTableKeys(tbl)
 	return keys
 end
 
+--- Escapes Lua pattern characters in a string
+--- @param str string The string to escape
+--- @return string # The escaped string
+local function escapePattern(str)
+	return (str:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"))
+end
+
 --- Splits a string by a delimiter
 --- @param input string The string to split
 --- @param delimiter string|nil The delimiter to split by
@@ -574,12 +581,14 @@ function utils.splitAndTrimString(input, delimiter)
 	return tokens
 end
 
-function utils.map(tbl, fn)
-	local newTbl = {}
+function utils.reduce(tbl, fn, init)
+	local acc = init
+	local i = 1
 	for k, v in pairs(tbl) do
-		newTbl[k] = fn(k, v)
+		acc = fn(acc, k, v, i)
+		i = i + 1
 	end
-	return newTbl
+	return acc
 end
 
 return utils

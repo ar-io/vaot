@@ -547,14 +547,20 @@ function vaot.init()
 	Handlers.prepend("_boot", function(msg)
 		return msg.Tags.Type == "Process" and Owner == msg.From
 	end, function(msg)
-		if msg.Tags["Own-Self"] == "true" then
+		local ownSelf = msg.Tags["Own-Self"]
+		if ownSelf == "true" or ownSelf == true then
 			Owner = msg.Id
 		end
 		if msg.Tags.Controllers then
 			local status, res = xpcall(function()
-				Controllers = utils.map(utils.splitAndTrimString(msg.Tags.Controllers, ","), function(_, controller)
-					return utils.formatAddress(controller)
-				end)
+				Controllers = utils.reduce(
+					utils.splitAndTrimString(msg.Tags.Controllers, ","),
+					function(acc, _, controller)
+						acc[utils.formatAddress(controller)] = true
+						return acc
+					end,
+					{}
+				)
 			end, debug.traceback)
 			if not status then
 				Send(msg, {
@@ -564,8 +570,21 @@ function vaot.init()
 					Action = "Invalid-Boot-Notice",
 					["Message-Id"] = msg.Id,
 				})
+				return
 			end
+		else
+			Controllers = {
+				[Owner] = true,
+			}
 		end
+
+		Send(msg, {
+			Action = "Boot-Notice",
+			Data = {
+				Owner = Owner,
+				Controllers = Controllers,
+			},
+		})
 	end, 1)
 end
 
