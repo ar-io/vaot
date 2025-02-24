@@ -1,5 +1,12 @@
 import {
+  AO_AUTHORITY,
+  AO_CU_URL,
+  DEFAULT_SCHEDULER_ID,
+  VAOT_MODULE_ID,
+} from '@/constants';
+import {
   AOProcess,
+  AoClient,
   AoMessageResult,
   AoSigner,
   InvalidContractConfigurationError,
@@ -9,6 +16,7 @@ import {
   isProcessConfiguration,
   isProcessIdConfiguration,
 } from '@ar.io/sdk';
+import { connect } from '@permaweb/aoconnect';
 import { Tag } from 'arweave/node/lib/transaction';
 
 export const VAOTReadHandlers = ['Get-Controllers', 'Get-Proposals'] as const;
@@ -104,6 +112,35 @@ export class VAOT {
       return new VAOTWriteable(config);
     }
     return new VAOTReadable(config);
+  }
+
+  static async spawn({
+    controllers = [],
+    ownSelf = false,
+    ao = connect({
+      CU_URL: AO_CU_URL,
+    }),
+    signer,
+  }: {
+    controllers?: string[];
+    ownSelf?: boolean;
+    signer: AoSigner;
+    ao?: AoClient;
+  }): Promise<string> {
+    return ao.spawn({
+      module: VAOT_MODULE_ID,
+      scheduler: DEFAULT_SCHEDULER_ID,
+      tags: [
+        { name: 'Authority', value: AO_AUTHORITY },
+        {
+          name: 'Controllers',
+          value: controllers.length ? controllers.join(',') : undefined,
+        },
+        { name: 'Own-Self', value: ownSelf.toString() },
+        { name: 'App-Name', value: 'VAOT' },
+      ].filter((t) => t.value !== undefined),
+      signer,
+    });
   }
 }
 

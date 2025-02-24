@@ -1,4 +1,4 @@
-import { formatForMaxCharCount } from '@src/utils';
+import { formatForMaxCharCount } from '@/utils';
 import { AlertCircle, CheckCheckIcon } from 'lucide-react';
 import { ReactNode } from 'react';
 import toast from 'react-hot-toast';

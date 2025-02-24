@@ -1,19 +1,19 @@
-import { useVAOTControllers } from '@src/hooks/useVAOTControllers';
+import { useVAOTControllers } from '@/hooks/useVAOTControllers';
 import TableView from './TableView';
 import { ReactNode, useEffect, useState } from 'react';
 import { ColumnDef, createColumnHelper } from '@tanstack/react-table';
-import { useVAOTProposals } from '@src/hooks/useVAOTProposals';
+import { useVAOTProposals } from '@/hooks/useVAOTProposals';
 import { Link } from 'react-router-dom';
-import { camelToReadable, formatForMaxCharCount } from '@src/utils';
-import { useVAOT } from '@src/hooks/useVAOT';
+import { camelToReadable, formatForMaxCharCount } from '@/utils';
+import { useVAOT } from '@/hooks/useVAOT';
 import { HammerIcon } from 'lucide-react';
 import Tooltip from '../Tooltip';
-import { VAOTWriteable } from '@src/services/vaot';
+import { VAOTWriteable } from '@/services/vaot';
 import {
   showErrorToast,
   showSuccessToast,
-} from '@src/components/notifications/toast';
-import CopyButton from '@src/components/buttons/CopyButton';
+} from '@/components/notifications/toast';
+import CopyButton from '@/components/buttons/CopyButton';
 
 type TableData = {
   controller: string;

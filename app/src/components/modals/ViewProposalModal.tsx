@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import BaseModal from './BaseModal';
-import { useVAOT } from '@src/hooks/useVAOT';
+import { useVAOT } from '@/hooks/useVAOT';
 import {
   showErrorToast,
   showTransactionSuccessToast,
 } from '../notifications/toast';
-import { VAOTWriteable } from '@src/services/vaot';
+import { VAOTWriteable } from '@/services/vaot';
 
 import { useQueryClient } from '@tanstack/react-query';
 import EvalProposalForm from '../data-display/forms/EvalProposalForm';
-import { useVAOTProposals } from '@src/hooks/useVAOTProposals';
+import { useVAOTProposals } from '@/hooks/useVAOTProposals';
 import AddControllerProposalForm from '../data-display/forms/AddControllerProposalForm';
 import RemoveControllerProposalForm from '../data-display/forms/RemoveControllerProposalForm';
 

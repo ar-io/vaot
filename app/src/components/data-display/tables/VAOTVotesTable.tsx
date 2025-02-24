@@ -1,11 +1,11 @@
 import TableView from './TableView';
 import { useEffect, useState } from 'react';
 import { ColumnDef, createColumnHelper } from '@tanstack/react-table';
-import { useVAOTProposals } from '@src/hooks/useVAOTProposals';
+import { useVAOTProposals } from '@/hooks/useVAOTProposals';
 import { Link } from 'react-router-dom';
-import { camelToReadable, formatForMaxCharCount } from '@src/utils';
+import { camelToReadable, formatForMaxCharCount } from '@/utils';
 
-import CopyButton from '@src/components/buttons/CopyButton';
+import CopyButton from '@/components/buttons/CopyButton';
 
 type TableData = {
   controller: string;

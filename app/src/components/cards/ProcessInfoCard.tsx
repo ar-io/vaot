@@ -1,7 +1,7 @@
-import { useProcessInfo } from '@src/hooks/useProcessInfo';
+import { useProcessInfo } from '@/hooks/useProcessInfo';
 import ArIOSpinner from '../loading/ArIOSpinner';
 import ReactJsonView from 'react-json-view';
-import { isArweaveTransactionID } from '@src/utils';
+import { isArweaveTransactionID } from '@/utils';
 
 function ProcessInfoCard({ processId }: { processId?: string }) {
   const {

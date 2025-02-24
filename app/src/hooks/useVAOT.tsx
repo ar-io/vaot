@@ -1,9 +1,9 @@
 import { AOProcess, ARWEAVE_TX_REGEX } from '@ar.io/sdk';
 import { useActiveStrategy } from '@project-kardeshev/ao-wallet-kit';
-import { VAOT, VAOTRead, VAOTWrite } from '@src/services/vaot';
+import { VAOT, VAOTRead, VAOTWrite } from '@/services/vaot';
 import { useEffect, useState } from 'react';
 import { connect } from '@permaweb/aoconnect';
-import { useGlobalState } from '@src/store';
+import { useGlobalState } from '@/store';
 
 export function useVAOT(id?: string): VAOTRead | VAOTWrite | null {
   const cuUrl = useGlobalState((state) => state.aoCuUrl);

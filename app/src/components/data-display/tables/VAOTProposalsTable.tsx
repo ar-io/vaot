@@ -1,21 +1,21 @@
 import TableView from './TableView';
 import { ReactNode, useEffect, useState } from 'react';
 import { ColumnDef, createColumnHelper } from '@tanstack/react-table';
-import { useVAOTProposals } from '@src/hooks/useVAOTProposals';
+import { useVAOTProposals } from '@/hooks/useVAOTProposals';
 import { Link } from 'react-router-dom';
-import { camelToReadable, formatForMaxCharCount } from '@src/utils';
-import { useVAOT } from '@src/hooks/useVAOT';
+import { camelToReadable, formatForMaxCharCount } from '@/utils';
+import { useVAOT } from '@/hooks/useVAOT';
 import { EyeIcon, Trash2Icon } from 'lucide-react';
 import Tooltip from '../Tooltip';
 
-import CopyButton from '@src/components/buttons/CopyButton';
-import ViewProposalModal from '@src/components/modals/ViewProposalModal';
+import CopyButton from '@/components/buttons/CopyButton';
+import ViewProposalModal from '@/components/modals/ViewProposalModal';
 import { useAddress } from '@project-kardeshev/ao-wallet-kit';
-import { VAOTWriteable } from '@src/services/vaot';
+import { VAOTWriteable } from '@/services/vaot';
 import {
   showErrorToast,
   showTransactionSuccessToast,
-} from '@src/components/notifications/toast';
+} from '@/components/notifications/toast';
 import { useQueryClient } from '@tanstack/react-query';
 
 type TableData = {

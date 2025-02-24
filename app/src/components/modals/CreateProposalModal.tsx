@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import BaseModal from './BaseModal';
-import { useVAOT } from '@src/hooks/useVAOT';
+import { useVAOT } from '@/hooks/useVAOT';
 import {
   showErrorToast,
   showTransactionSuccessToast,
@@ -9,11 +9,11 @@ import {
   VAOTProposalType,
   VAOTProposalTypes,
   VAOTWriteable,
-} from '@src/services/vaot';
+} from '@/services/vaot';
 import Sidebar from '../pages/Sidebar';
 import { useQueryClient } from '@tanstack/react-query';
 import EvalProposalForm from '../data-display/forms/EvalProposalForm';
-import { PROPOSAL_TYPE_PARAM_DEFAULTS } from '@src/constants';
+import { PROPOSAL_TYPE_PARAM_DEFAULTS } from '@/constants';
 import AddControllerProposalForm from '../data-display/forms/AddControllerProposalForm';
 import RemoveControllerProposalForm from '../data-display/forms/RemoveControllerProposalForm';
 

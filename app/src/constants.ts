@@ -44,3 +44,9 @@ export const PROPOSAL_TYPE_PARAM_DEFAULTS: Record<
     processId: '',
   },
 };
+
+export const VAOT_MODULE_ID = '3y8BX3lHeMM4KktkZtrjXM97HPUWq7L0cuk5cjQk4BA';
+
+export const AO_AUTHORITY = 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY';
+export const DEFAULT_SCHEDULER_ID =
+  '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA';

@@ -1,5 +1,5 @@
 import { ARWEAVE_TX_REGEX } from '@ar.io/sdk';
-import { useGlobalState } from '@src/store';
+import { useGlobalState } from '@/store';
 import { useState } from 'react';
 import { showErrorToast, showSuccessToast } from '../notifications/toast';
 

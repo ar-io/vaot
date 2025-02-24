@@ -1,11 +1,11 @@
 import { ReactElement, useState } from 'react';
 import BaseModal from './BaseModal';
-import { useVAOT } from '@src/hooks/useVAOT';
+import { useVAOT } from '@/hooks/useVAOT';
 import {
   showErrorToast,
   showTransactionSuccessToast,
 } from '../notifications/toast';
-import { VAOTWriteable } from '@src/services/vaot';
+import { VAOTWriteable } from '@/services/vaot';
 import { useQueryClient } from '@tanstack/react-query';
 
 function AddControllerModal({

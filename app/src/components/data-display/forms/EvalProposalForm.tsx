@@ -1,10 +1,10 @@
-import ProcessInfoCard from '@src/components/cards/ProcessInfoCard';
+import ProcessInfoCard from '@/components/cards/ProcessInfoCard';
 import VAOTVotesTable from '../tables/VAOTVotesTable';
 import { Editor } from '@monaco-editor/react';
-import RadioGroup from '@src/components/inputs/RadioGroup';
-import { useVAOTProposals } from '@src/hooks/useVAOTProposals';
-import { VAOTEvalProposalData } from '@src/services/vaot';
-import { PROPOSAL_TYPE_PARAM_DEFAULTS } from '@src/constants';
+import RadioGroup from '@/components/inputs/RadioGroup';
+import { useVAOTProposals } from '@/hooks/useVAOTProposals';
+import { VAOTEvalProposalData } from '@/services/vaot';
+import { PROPOSAL_TYPE_PARAM_DEFAULTS } from '@/constants';
 
 function EvalProposalForm({
   vaotId,

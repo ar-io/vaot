@@ -3,7 +3,7 @@ import {
   DEFAULT_ARWEAVE_HOST,
   DEFAULT_ARWEAVE_PORT,
   DEFAULT_ARWEAVE_PROTOCOL,
-} from '@src/constants';
+} from '@/constants';
 
 import Arweave from 'arweave/web';
 import { create } from 'zustand';

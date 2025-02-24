@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 import Placeholder from './Placeholder';
-import ArIOSpinner from '@src/components/loading/ArIOSpinner';
+import ArIOSpinner from '@/components/loading/ArIOSpinner';
 
 const TableView = <T, S>({
   columns,

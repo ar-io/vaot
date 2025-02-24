@@ -1,6 +1,6 @@
 import { GithubIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { APP_VERSION } from '@src/constants';
+import { APP_VERSION } from '@/constants';
 
 function Footer() {
   return (

@@ -1,8 +1,8 @@
 import { AOProcess } from '@ar.io/sdk';
 import { connect } from '@permaweb/aoconnect';
-import { ARNS_TX_ID_REGEX } from '@src/constants';
-import { useGlobalState } from '@src/store';
-import { isArweaveTransactionID } from '@src/utils';
+import { ARNS_TX_ID_REGEX } from '@/constants';
+import { useGlobalState } from '@/store';
+import { isArweaveTransactionID } from '@/utils';
 import { useQuery } from '@tanstack/react-query';
 
 export function useProcessInfo(id?: string) {
