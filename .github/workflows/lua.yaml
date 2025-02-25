@@ -42,6 +42,7 @@ jobs:
           cache: 'yarn'
 
       - run: yarn --frozen-lockfile
+      - run: yarn copy-aos-process
       - run: yarn build && yarn module:build
       - run: yarn test:integration
 
