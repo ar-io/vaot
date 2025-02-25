@@ -1,9 +1,14 @@
 import { describe, it, before, beforeEach } from 'node:test';
 import { getControllers, getProposals, handle, normalizeObject, parseEventsFromResult, rubberStampProposal } from './helpers.mjs';
 import {
+  AO_LOADER_HANDLER_ENV,
+  AO_LOADER_OPTIONS,
+  DEFAULT_HANDLE_OPTIONS,
   PROCESS_OWNER,
   STUB_MESSAGE_ID,
+  VAOT_WASM,
 } from '../tools/constants.mjs';
+import AoLoader from '@permaweb/ao-loader';
 import assert from 'node:assert';
 
 describe('AOS Handlers:', () => {
@@ -28,6 +33,122 @@ describe('AOS Handlers:', () => {
 
   it('should have the process owner as the only controller on boot', async () => {
     assert.deepStrictEqual(await getControllers(testMemory), [PROCESS_OWNER]);
+  });
+
+  it('should allow for process creation with Own-Self set to true', async () => {
+    const handle = await AoLoader(VAOT_WASM, AO_LOADER_OPTIONS);
+    const processResult = await handle(
+      null,
+      {
+        ...{
+          ...DEFAULT_HANDLE_OPTIONS,
+          Id: 'foo',
+        },
+
+        Tags: [
+          {
+            name: 'Type',
+            value: 'Process',
+          },
+          {
+            name: 'Own-Self',
+            value: true, // Boolean in this test. String in later test.
+          },
+        ],
+      },
+      {
+        ...AO_LOADER_HANDLER_ENV,
+        Id: 'foo',
+      },
+    );
+    assert.deepEqual(1, processResult.Messages.length)
+    assert.deepEqual("Boot-Notice", processResult.Messages[0].Tags?.filter((tag) => { return tag.name === "Action" })?.[0]?.value)
+    assert.deepEqual(JSON.parse(processResult.Messages[0].Data), {
+      Owner: "foo",
+      Controllers: {
+        "foo": true,
+      }
+    });
+  });
+
+  it('should allow for process creation with a comma-separated Controllers list', async () => {
+    const handle = await AoLoader(VAOT_WASM, AO_LOADER_OPTIONS);
+    const processResult = await handle(
+      null,
+      {
+        ...{
+          ...DEFAULT_HANDLE_OPTIONS,
+          Id: 'foo',
+        },
+
+        Tags: [
+          {
+            name: 'Type',
+            value: 'Process',
+          },
+          {
+            name: 'Controllers',
+            value: 'foo,bar,0x5A01F6F3454df4835787425a8c65485BB0D21400', // ETH address NOT EIP-55 normalized
+          },
+        ],
+      },
+      {
+        ...AO_LOADER_HANDLER_ENV,
+        Id: 'foo',
+      },
+    );
+    assert.deepEqual(1, processResult.Messages.length)
+    assert.deepEqual("Boot-Notice", processResult.Messages[0].Tags?.filter((tag) => { return tag.name === "Action" })?.[0]?.value)
+    assert.deepEqual(JSON.parse(processResult.Messages[0].Data), {
+      Owner: PROCESS_OWNER,
+      Controllers: {
+        "foo": true,
+        "bar": true,
+        "0x5A01F6f3454Df4835787425A8C65485Bb0d21400": true, // ETH address should be EIP-55 normalized
+      }
+    });
+  });
+
+  it('should allow for process creation with Own-Self set to true and a comma-separated Controllers list', async () => {
+    const handle = await AoLoader(VAOT_WASM, AO_LOADER_OPTIONS);
+    const processResult = await handle(
+      null,
+      {
+        ...{
+          ...DEFAULT_HANDLE_OPTIONS,
+          Id: 'foo',
+        },
+
+        Tags: [
+          {
+            name: 'Type',
+            value: 'Process',
+          },
+          {
+            name: 'Own-Self',
+            value: 'true',
+          },
+          {
+            name: 'Controllers',
+            value: 'bar,baz,0x5A01F6F3454df4835787425a8c65485BB0D21400', // ETH address NOT EIP-55 normalized
+          },
+        ],
+      },
+      {
+        ...AO_LOADER_HANDLER_ENV,
+        Id: 'foo',
+      },
+    );
+    assert.deepEqual(1, processResult.Messages.length)
+    assert.deepEqual("Boot-Notice", processResult.Messages[0].Tags?.filter((tag) => { return tag.name === "Action" })?.[0]?.value)
+    assert.deepEqual(JSON.parse(processResult.Messages[0].Data), {
+      Owner: 'foo',
+      Controllers: {
+        "bar": true,
+        "baz": true,
+        "0x5A01F6f3454Df4835787425A8C65485Bb0d21400": true, // ETH address should be EIP-55 normalized
+      }
+    });
   });
 
   it('should have no proposals on boot', async () => {

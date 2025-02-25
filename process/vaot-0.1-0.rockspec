@@ -2,7 +2,7 @@ package = "vaot"
 version = "0.1-0"
 rockspec_format = "3.0"
 source = {
-    url = "./src/main.lua"
+    url = "./src/aos.lua"
 }
 dependencies = {
     "busted >= 2.2.0",
