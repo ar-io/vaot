@@ -3,14 +3,20 @@
   "scripts": {
     "build": "node tools/bundle-aos.mjs",
     "lint": "luacheck .",
-    "test:integration": "yarn build && node --test --test-concurrency 1 --experimental-wasm-memory64 **/*.test.mjs",
+    "test:integration": "node --test --test-concurrency 1 --experimental-wasm-memory64 **/*.test.mjs",
     "test:unit": "busted .",
-    "evolve": "yarn build && node tools/evolve.mjs"
+    "evolve": "yarn build && node tools/evolve.mjs",
+    "copy-aos-process": "node tools/copy-aos-process.mjs",
+    "module:build": "rm -rf dist && yarn build && rm -rf build && cp -r tools/fixtures/aos-process build && cp dist/process.lua build/vaot.lua && yarn node tools/inject-vaot-code.mjs && cd build && ao build && mv process.wasm ../dist/aos-vaot.wasm && cd .. && yarn module:load",
+    "module:publish": "node tools/publish-module.mjs",
+    "module:load": "node tools/load-module.mjs"
   },
   "devDependencies": {
     "@ar.io/sdk": "^3.2.0",
+    "@ardrive/turbo-sdk": "^1.19.0",
     "@permaweb/ao-loader": "^0.0.44",
-    "@permaweb/aoconnect": "^0.0.63"
+    "@permaweb/aoconnect": "^0.0.63",
+    "js-yaml": "^4.1.0"
   },
   "lint-staged": {
     "*.lua": [

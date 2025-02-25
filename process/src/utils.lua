@@ -534,4 +534,61 @@ function utils.getTableKeys(tbl)
 	return keys
 end
 
+--- Escapes Lua pattern characters in a string
+--- @param str string The string to escape
+--- @return string # The escaped string
+local function escapePattern(str)
+	return (str:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"))
+end
+
+--- Splits a string by a delimiter
+--- @param input string The string to split
+--- @param delimiter string|nil The delimiter to split by
+--- @return table # The split string
+function utils.splitString(input, delimiter)
+	delimiter = delimiter or ","
+	delimiter = escapePattern(delimiter)
+	local result = {}
+	for token in (input or ""):gmatch(string.format("([^%s]+)", delimiter)) do
+		table.insert(result, token)
+	end
+	return result
+end
+
+--- Trims a string
+--- @param input string The string to trim
+--- @return string The trimmed string
+function utils.trimString(input)
+	return input:match("^%s*(.-)%s*$")
+end
+
+--- Splits a string by a delimiter and trims each token
+--- @param input string|nil The string to split
+--- @param delimiter string|nil The delimiter to split by, defaults to ","
+--- @return table tokens - the split and trimmed string
+function utils.splitAndTrimString(input, delimiter)
+	delimiter = escapePattern(delimiter or ",")
+	if not input then
+		return {}
+	end
+	local tokens = {}
+	for _, token in ipairs(utils.splitString(input, delimiter)) do
+		local trimmed = utils.trimString(token)
+		if #trimmed > 0 then
+			table.insert(tokens, trimmed)
+		end
+	end
+	return tokens
+end
+
+function utils.reduce(tbl, fn, init)
+	local acc = init
+	local i = 1
+	for k, v in pairs(tbl) do
+		acc = fn(acc, k, v, i)
+		i = i + 1
+	end
+	return acc
+end
+
 return utils
