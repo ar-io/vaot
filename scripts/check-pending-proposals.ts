@@ -5,14 +5,34 @@ const ao = connect({
   CU_URL: 'https://cu.ardrive.io',
 });
 
-const vaot_ids = [
-  '4Ko7JmGPtbKLLqctNFr6ukWqX0lt4l0ktXgYKyMlbsM', // ant registry main and staging
-  'My21NOHZyyeQG0t0yANsWjRakNDM7CJvd8urtdMLEDE', // ario network process
+const vaot_processes = [
+  {
+    id: '4Ko7JmGPtbKLLqctNFr6ukWqX0lt4l0ktXgYKyMlbsM',
+    name: 'ANT Registry VAOT',
+    description: 'Main and staging registry process',
+    mentions: [
+      '<@U044BQZ9CJY>', // atticus
+    ],
+  },
+  {
+    id: 'My21NOHZyyeQG0t0yANsWjRakNDM7CJvd8urtdMLEDE',
+    name: 'AR.IO Network VAOT',
+    description: 'AR.IO network process',
+    mentions: [],
+  },
+];
+
+// Global mentions for all VAOT alerts (optional)
+const globalMentions = [
+  '<@U023GFXA4A1>', // ariel
+  '<@U03H8L2F42J>', // dylan
 ];
 
 interface ProposalInfo {
   vaotId: string;
+  vaotName: string;
   proposalCount: number;
+  mentions: string[];
 }
 
 async function getProposals(vaot_id: string) {
@@ -35,28 +55,42 @@ async function getProposals(vaot_id: string) {
 }
 
 async function sendSlackNotification(proposalsWithPending: ProposalInfo[]) {
-  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+  const webhookUrl = process.env.PROPOSAL_MONITOR_SLACK_WEBHOOK_URL;
 
   if (!webhookUrl) {
-    console.log('⚠️  SLACK_WEBHOOK_URL not set, skipping notification');
+    console.log(
+      '⚠️  PROPOSAL_MONITOR_SLACK_WEBHOOK_URL not set, skipping notification',
+    );
     return;
   }
 
-  // Build the proposals summary
+  // Build the proposals summary with VAOT names
   const proposalsInfo = proposalsWithPending
     .map(
-      ({ vaotId, proposalCount }) =>
-        `• VAOT [${vaotId}] has ${proposalCount} pending proposals - <https://vaot.ar.io/#/${vaotId}|View in VAOT>`,
+      ({ vaotId, vaotName, proposalCount }) =>
+        `• **${vaotName}** has ${proposalCount} pending proposal${proposalCount > 1 ? 's' : ''} - <https://vaot.ar.io/#/${vaotId}|View in VAOT>`,
     )
     .join('\n');
 
+  // Collect all mentions from processes with pending proposals
+  const allMentions = [
+    ...globalMentions,
+    ...proposalsWithPending.flatMap(({ mentions }) => mentions),
+  ];
+  const uniqueMentions = [...new Set(allMentions)];
+  const mentionsText =
+    uniqueMentions.length > 0 ? uniqueMentions.join(' ') : '';
+
   const payload = {
+    text: mentionsText
+      ? `🚨 VAOT Proposals Require Review! Calling ${mentionsText} for review and voting.`
+      : '🚨 VAOT Proposals Require Review!',
     attachments: [
       {
         fallback: 'VAOT Proposals Require Review!',
         color: 'warning',
         title: 'Pending Proposals Alert',
-        text: 'There are pending proposals in VAOT that require your review and voting.',
+        text: 'There are pending proposals in VAOT that require your review and voting. \n',
         fields: [
           {
             title: 'Proposals Summary',
@@ -114,14 +148,21 @@ async function sendSlackNotification(proposalsWithPending: ProposalInfo[]) {
 async function main() {
   const proposalsWithPending: ProposalInfo[] = [];
 
-  for (const vaot_id of vaot_ids) {
-    const proposals = await getProposals(vaot_id);
+  for (const vaot_process of vaot_processes) {
+    const proposals = await getProposals(vaot_process.id);
     const proposalCount = Object.keys(proposals).length;
 
-    console.log(`VAOT [${vaot_id}] has [${proposalCount}] pending proposals`);
+    console.log(
+      `VAOT [${vaot_process.name}] has [${proposalCount}] pending proposals`,
+    );
 
     if (proposalCount > 0) {
-      proposalsWithPending.push({ vaotId: vaot_id, proposalCount });
+      proposalsWithPending.push({
+        vaotId: vaot_process.id,
+        vaotName: vaot_process.name,
+        proposalCount,
+        mentions: vaot_process.mentions,
+      });
     }
   }
 

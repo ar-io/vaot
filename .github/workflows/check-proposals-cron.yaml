@@ -25,5 +25,5 @@ jobs:
 
       - name: Check pending proposals and notify
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.PROPOSAL_MONITOR_SLACK_WEBHOOK_URL }}
         run: yarn check-pending-proposals
