@@ -26,6 +26,7 @@
     "@tanstack/react-router": "^1.102.5",
     "@tanstack/react-table": "^8.21.2",
     "arweave": "^1.15.5",
+    "arweave-graphql": "^0.0.5",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",

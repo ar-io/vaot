@@ -6,6 +6,7 @@ import VAOTProposalsTable from '../data-display/tables/VAOTProposalsTable';
 import { useState } from 'react';
 import AddControllerModal from '../modals/AddControllerModal';
 import CreateProposalModal from '../modals/CreateProposalModal';
+import VAOTHistoricalProposalsTable from '../data-display/tables/VAOTHistoricalProposalsTable';
 
 function Dashboard() {
   const { id } = useParams();
@@ -42,6 +43,13 @@ function Dashboard() {
               </button>
             </div>
             <VAOTProposalsTable vaotId={id} />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between">
+              <h1 className="text-white text-3xl">Historical Proposals</h1>
+            </div>
+            <VAOTHistoricalProposalsTable vaotId={id} />
           </div>
         </div>
       </Page>
