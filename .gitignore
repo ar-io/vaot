@@ -15,3 +15,4 @@ luacov.stats.out
 coverage
 aos-process
 build
+._*
