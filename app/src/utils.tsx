@@ -56,3 +56,7 @@ export function isEthAddress(address: string) {
 export function isValidAoAddress(address: string) {
   return isEthAddress(address) || isArweaveTransactionID(address);
 }
+
+export function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

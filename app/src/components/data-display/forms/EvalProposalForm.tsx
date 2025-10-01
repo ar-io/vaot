@@ -125,8 +125,12 @@ function EvalProposalForm({
         key={'eval-proposal-' + (proposalId ? proposalId : 'new')}
         theme="vs-dark"
         height={'100%'}
+        width={'100%'}
         options={{
           readOnly: readOnly,
+          stickyScroll: {
+            enabled: false,
+          },
         }}
         language="lua"
         value={proposalId ? proposal?.evalStr : proposalParams.evalStr}
