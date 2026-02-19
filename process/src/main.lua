@@ -100,19 +100,18 @@ function vaot.init()
 
 	local function sendStatePatch()
 		ao.send({
-			Target = ao.id,
-			device = 'patch@1.0',
+			device = "patch@1.0",
 			state = {
 				controllers = Controllers,
-				proposals = Proposals
-			}
+				proposals = Proposals,
+			},
 		})
 	end
 
-	InitialSync = InitialSync or 'INCOMPLETE'
-	if InitialSync == 'INCOMPLETE' then
+	InitialSync = InitialSync or "INCOMPLETE"
+	if InitialSync == "INCOMPLETE" then
 		sendStatePatch()
-		InitialSync = 'COMPLETE'
+		InitialSync = "COMPLETE"
 	end
 
 	--- @param handlerName string
