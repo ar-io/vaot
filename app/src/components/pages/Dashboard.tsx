@@ -6,17 +6,33 @@ import VAOTProposalsTable from '../data-display/tables/VAOTProposalsTable';
 import { useState } from 'react';
 import AddControllerModal from '../modals/AddControllerModal';
 import CreateProposalModal from '../modals/CreateProposalModal';
+import { useHyperbeamState } from '@/hooks/useHyperbeamState';
+import { RefreshCwIcon } from 'lucide-react';
 
 function Dashboard() {
   const { id } = useParams();
 
   const [showAddControllerModal, setShowAddControllerModal] = useState(false);
   const [showCreateProposalModal, setShowCreateProposalModal] = useState(false);
+  const { forceRefresh, isForceRefreshing } = useHyperbeamState(id);
 
   return (
     <>
       <Page className="px-[4rem] pt-4 h-full">
         <div className="flex flex-col w-full gap-10">
+          <div className="flex justify-end">
+            <button
+              onClick={forceRefresh}
+              disabled={isForceRefreshing}
+              className="flex items-center gap-1 text-sm text-stone-300 hover:text-emerald-500 disabled:text-stone-600 transition-colors"
+              title="Force refresh state from HyperBEAM (/now)"
+            >
+              <RefreshCwIcon
+                className={`size-4 ${isForceRefreshing ? 'animate-spin' : ''}`}
+              />
+              {isForceRefreshing ? 'Refreshing...' : 'Force Refresh'}
+            </button>
+          </div>
           <div className="flex flex-col gap-2">
             <div className="flex justify-between">
               <h1 className="text-white text-3xl">Controllers</h1>

@@ -3,6 +3,8 @@ import { VAOTProposalType } from './services/vaot';
 export const ARNS_TX_ID_REGEX = new RegExp('^[a-zA-Z0-9\\-_s+]{43}$');
 
 export const AO_CU_URL = process.env.VITE_AO_CU_URL || 'https://cu.ardrive.io';
+export const HYPERBEAM_URL =
+  process.env.VITE_HYPERBEAM_URL || 'https://push.forward.computer';
 export const DEFAULT_ARWEAVE_PROTOCOL =
   process.env.VITE_GATEWAY_PROTOCOL ?? 'https';
 export const DEFAULT_ARWEAVE_HOST =
