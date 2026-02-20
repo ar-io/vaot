@@ -1,5 +1,6 @@
 {
   "name": "vaot",
+  "type": "module",
   "version": "0.1.0",
   "main": "dist/index.js",
   "repository": "https://github.com/ar-io/vaot.git",
@@ -8,12 +9,16 @@
   "private": false,
   "scripts": {
     "prepare": "husky",
-    "lint": "prettier --write ."
+    "lint": "prettier --write .",
+    "check-pending-proposals": "tsx scripts/check-pending-proposals.ts"
   },
   "devDependencies": {
+    "@permaweb/aoconnect": "^0.0.90",
+    "@types/node": "^24.5.2",
     "husky": "^9.0.0",
-    "prettier": "^3.3.2",
     "lint-staged": "^15.0.0",
-    "markdown-toc-gen": "^1.0.0"
+    "markdown-toc-gen": "^1.0.0",
+    "prettier": "^3.3.2",
+    "tsx": "^4.20.5"
   }
 }
