@@ -10,6 +10,7 @@ import { VAOTWriteable } from '@/services/vaot';
 import { useQueryClient } from '@tanstack/react-query';
 import EvalProposalForm from '../data-display/forms/EvalProposalForm';
 import { useVAOTProposals } from '@/hooks/useVAOTProposals';
+import { HYPERBEAM_STATE_QUERY_KEY } from '@/hooks/useHyperbeamState';
 import AddControllerProposalForm from '../data-display/forms/AddControllerProposalForm';
 import RemoveControllerProposalForm from '../data-display/forms/RemoveControllerProposalForm';
 
@@ -47,10 +48,7 @@ function ViewProposalModal({
           res.id,
         );
         queryClient.resetQueries({
-          queryKey: ['vaot-proposals', vaotId],
-        });
-        queryClient.resetQueries({
-          queryKey: ['vaot-controllers', vaotId],
+          queryKey: [HYPERBEAM_STATE_QUERY_KEY, vaotId],
         });
         onClose();
       } else throw new Error('VAOT is not writeable, sign in to use');

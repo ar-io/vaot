@@ -3,6 +3,7 @@ import {
   DEFAULT_ARWEAVE_HOST,
   DEFAULT_ARWEAVE_PORT,
   DEFAULT_ARWEAVE_PROTOCOL,
+  HYPERBEAM_URL,
 } from '@/constants';
 
 import Arweave from 'arweave/web';
@@ -13,6 +14,7 @@ export type GlobalState = {
   arweave: Arweave;
   aoCuUrl: string;
   gatewayUrl: string;
+  hyperbeamUrl: string;
 };
 
 export type GlobalStateActions = {
@@ -20,6 +22,7 @@ export type GlobalStateActions = {
   setArweave: (arweave: Arweave) => void;
   setAoCuUrl: (aoCuUrl: string) => void;
   setGatewayUrl: (gatewayUrl: string) => void;
+  setHyperbeamUrl: (hyperbeamUrl: string) => void;
 };
 
 export const initialGlobalState: GlobalState = {
@@ -33,6 +36,7 @@ export const initialGlobalState: GlobalState = {
   }),
   aoCuUrl: AO_CU_URL,
   gatewayUrl: `${DEFAULT_ARWEAVE_PROTOCOL}://${DEFAULT_ARWEAVE_HOST}:${DEFAULT_ARWEAVE_PORT}`,
+  hyperbeamUrl: window.localStorage.getItem('hyperbeamUrl') || HYPERBEAM_URL,
 };
 export class GlobalStateActionBase implements GlobalStateActions {
   constructor(
@@ -52,6 +56,10 @@ export class GlobalStateActionBase implements GlobalStateActions {
   };
   setGatewayUrl = (gatewayUrl: string) => {
     this.set({ gatewayUrl });
+  };
+  setHyperbeamUrl = (hyperbeamUrl: string) => {
+    this.set({ hyperbeamUrl });
+    window.localStorage.setItem('hyperbeamUrl', hyperbeamUrl);
   };
 }
 

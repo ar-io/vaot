@@ -98,6 +98,22 @@ function vaot.init()
 		end
 	end
 
+	local function sendStatePatch()
+		ao.send({
+			device = "patch@1.0",
+			state = {
+				controllers = Controllers,
+				proposals = Proposals,
+			},
+		})
+	end
+
+	InitialSync = InitialSync or "INCOMPLETE"
+	if InitialSync == "INCOMPLETE" then
+		sendStatePatch()
+		InitialSync = "COMPLETE"
+	end
+
 	--- @param handlerName string
 	--- @param pattern fun(msg: ParsedMessage):'continue'|boolean
 	--- @param handleFn fun(msg: ParsedMessage)
@@ -464,6 +480,7 @@ function vaot.init()
 		end
 
 		handleMaybeVoteQuorum(proposalName, msg)
+		sendStatePatch()
 	end)
 
 	addEventingHandler("vote", Handlers.utils.hasMatchingTag("Action", "Vote"), function(msg)
@@ -491,6 +508,7 @@ function vaot.init()
 		})
 
 		handleMaybeVoteQuorum(proposalName, msg)
+		sendStatePatch()
 	end)
 
 	addEventingHandler("revoke", Handlers.utils.hasMatchingTag("Action", "Revoke-Proposal"), function(msg)
@@ -511,6 +529,7 @@ function vaot.init()
 				Data = proposal,
 			})
 		end
+		sendStatePatch()
 	end)
 
 	addEventingHandler("controllers", Handlers.utils.hasMatchingTag("Action", "Get-Controllers"), function(msg)
@@ -585,6 +604,7 @@ function vaot.init()
 				Controllers = Controllers,
 			},
 		})
+		sendStatePatch()
 	end, 1)
 end
 

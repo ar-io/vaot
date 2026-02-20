@@ -7,6 +7,7 @@ import {
 } from '../notifications/toast';
 import { VAOTWriteable } from '@/services/vaot';
 import { useQueryClient } from '@tanstack/react-query';
+import { HYPERBEAM_STATE_QUERY_KEY } from '@/hooks/useHyperbeamState';
 
 function AddControllerModal({
   onClose,
@@ -27,8 +28,7 @@ function AddControllerModal({
           controller: controller.trim(),
           vote: 'yay',
         });
-        queryClient.resetQueries({ queryKey: ['vaot-proposals', vaotId] });
-        queryClient.resetQueries({ queryKey: ['vaot-controllers', vaotId] });
+        queryClient.resetQueries({ queryKey: [HYPERBEAM_STATE_QUERY_KEY, vaotId] });
 
         showTransactionSuccessToast('Add Controller Proposal', res.id);
         onClose();

@@ -12,6 +12,7 @@ import {
 } from '@/services/vaot';
 import Sidebar from '../pages/Sidebar';
 import { useQueryClient } from '@tanstack/react-query';
+import { HYPERBEAM_STATE_QUERY_KEY } from '@/hooks/useHyperbeamState';
 import EvalProposalForm from '../data-display/forms/EvalProposalForm';
 import { PROPOSAL_TYPE_PARAM_DEFAULTS } from '@/constants';
 import AddControllerProposalForm from '../data-display/forms/AddControllerProposalForm';
@@ -52,10 +53,7 @@ function CreateProposalModal({
           res.id,
         );
         queryClient.resetQueries({
-          queryKey: ['vaot-proposals', vaotId],
-        });
-        queryClient.resetQueries({
-          queryKey: ['vaot-controllers', vaotId],
+          queryKey: [HYPERBEAM_STATE_QUERY_KEY, vaotId],
         });
         onClose();
       } else throw new Error('VAOT is not writeable, sign in to use');

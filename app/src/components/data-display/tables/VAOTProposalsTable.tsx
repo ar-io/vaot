@@ -17,6 +17,7 @@ import {
   showTransactionSuccessToast,
 } from '@/components/notifications/toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { HYPERBEAM_STATE_QUERY_KEY } from '@/hooks/useHyperbeamState';
 
 type TableData = {
   proposalNumber: number;
@@ -128,7 +129,7 @@ function VAOTProposalsTable({ vaotId }: { vaotId?: string }) {
                               res.id,
                             );
                             queryClient.resetQueries({
-                              queryKey: ['vaot-proposals', vaotId],
+                              queryKey: [HYPERBEAM_STATE_QUERY_KEY, vaotId],
                             });
                           }
                         } else {
